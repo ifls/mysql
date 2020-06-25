@@ -22,17 +22,24 @@ import (
 
 type mysqlConn struct {
 	buf              buffer
-	netConn          net.Conn	//到服务器的tcp连接
-	rawConn          net.Conn // underlying connection when netConn is TLS connection.
+
+	netConn          net.Conn	// 到服务器的tcp连接
+	rawConn          net.Conn   // 是 tls 时, 保存原始的net.Conn underlying connection when netConn is TLS connection.
+
 	affectedRows     uint64
 	insertId         uint64
+
 	cfg              *Config
+
 	maxAllowedPacket int
 	maxWriteSize     int
+
 	writeTimeout     time.Duration
+
 	flags            clientFlag
 	status           statusFlag
-	sequence         uint8
+
+	sequence         uint8	//一个命令拆分多个包时,需要标记 第一个, 新的命令会重置为1
 	parseTime        bool
 	reset            bool // set when the Go SQL package calls ResetSession
 
@@ -41,8 +48,9 @@ type mysqlConn struct {
 	watcher  chan<- context.Context
 	closech  chan struct{}
 	finished chan<- struct{}
+
 	canceled atomicError // set non-nil if conn is canceled
-	closed   atomicBool  // set when conn is closed, before closech is closed
+	closed   atomicBool  // 连接是否关闭 set when conn is closed, before closech is closed
 }
 
 // Handles parameters set in DSN after the connection is established
@@ -99,6 +107,7 @@ func (mc *mysqlConn) markBadConn(err error) error {
 	return driver.ErrBadConn
 }
 
+//开始事务的执行
 func (mc *mysqlConn) Begin() (driver.Tx, error) {
 	return mc.begin(false)
 }
@@ -108,6 +117,7 @@ func (mc *mysqlConn) begin(readOnly bool) (driver.Tx, error) {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
 	}
+
 	var q string
 	if readOnly {
 		q = "START TRANSACTION READ ONLY"
@@ -121,8 +131,9 @@ func (mc *mysqlConn) begin(readOnly bool) (driver.Tx, error) {
 	return nil, mc.markBadConn(err)
 }
 
+// 发送退出命令
 func (mc *mysqlConn) Close() (err error) {
-	// Makes Close idempotent
+	// Makes Close idempotent幂等
 	if !mc.closed.IsSet() {
 		err = mc.writeCommandPacket(comQuit)
 	}
@@ -132,8 +143,8 @@ func (mc *mysqlConn) Close() (err error) {
 	return
 }
 
-// Closes the network connection and unsets internal variables. Do not call this
-// function after successfully authentication, call Close instead. This function
+// Closes the network connection and unsets internal variables. 关闭网络连接, 设置 close 相关变量
+// Do not call this function after successfully authentication, call Close instead. This function
 // is called before auth or on auth failure because MySQL will have already
 // closed the network connection.
 func (mc *mysqlConn) cleanup() {
@@ -161,6 +172,7 @@ func (mc *mysqlConn) error() error {
 	return nil
 }
 
+// 发送 预处理语句命令
 func (mc *mysqlConn) Prepare(query string) (driver.Stmt, error) {
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
@@ -328,6 +340,7 @@ func (mc *mysqlConn) interpolateParams(query string, args []driver.Value) (strin
 	return string(buf), nil
 }
 
+//执行 增删改语句
 func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
@@ -364,7 +377,7 @@ func (mc *mysqlConn) exec(query string) error {
 		return mc.markBadConn(err)
 	}
 
-	// Read Result
+	// Read Result 读取长度头部
 	resLen, err := mc.readResultSetHeaderPacket()
 	if err != nil {
 		return err
@@ -415,6 +428,7 @@ func (mc *mysqlConn) query(query string, args []driver.Value) (*textRows, error)
 			rows := new(textRows)
 			rows.mc = mc
 
+			//没有列数据
 			if resLen == 0 {
 				rows.rs.done = true
 
@@ -426,7 +440,7 @@ func (mc *mysqlConn) query(query string, args []driver.Value) (*textRows, error)
 				}
 			}
 
-			// Columns
+			// Columns 保存列信息保存到 Rows 里,等需要读的时候才去继续扫描包
 			rows.rs.columns, err = mc.readColumns(resLen)
 			return rows, err
 		}
@@ -436,6 +450,7 @@ func (mc *mysqlConn) query(query string, args []driver.Value) (*textRows, error)
 
 // Gets the value of the given MySQL System Variable
 // The returned byte slice is only valid until the next read
+// 读取数据库系统变量的值
 func (mc *mysqlConn) getSystemVar(name string) ([]byte, error) {
 	// Send command
 	if err := mc.writeCommandPacketStr(comQuery, "SELECT @@"+name); err != nil {
@@ -483,12 +498,14 @@ func (mc *mysqlConn) finish() {
 }
 
 // Ping implements driver.Pinger interface
+// 发送 ping 命令, 并读取 ping 结果
 func (mc *mysqlConn) Ping(ctx context.Context) (err error) {
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return driver.ErrBadConn
 	}
 
+	//如果已经被 cannel 了
 	if err = mc.watchCancel(ctx); err != nil {
 		return
 	}

@@ -128,17 +128,21 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 
 	for {
 		var size int
+		//超出大小,需要分开发送
 		if pktLen >= maxPacketSize {
+			//表示数据长度是满的
 			data[0] = 0xff
 			data[1] = 0xff
 			data[2] = 0xff
 			size = maxPacketSize
 		} else {
+			//三B长度 小端序
 			data[0] = byte(pktLen)
 			data[1] = byte(pktLen >> 8)
 			data[2] = byte(pktLen >> 16)
 			size = pktLen
 		}
+		//1B序号
 		data[3] = mc.sequence
 
 		// Write packet
@@ -148,6 +152,7 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			}
 		}
 
+		//写出包
 		n, err := mc.netConn.Write(data[:4+size])
 		if err == nil && n == 4+size {
 			mc.sequence++
@@ -167,6 +172,7 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			if cerr := mc.canceled.Value(); cerr != nil {
 				return cerr
 			}
+
 			if n == 0 && pktLen == len(data)-4 {
 				// only for the first loop iteration when nothing was written yet
 				return errBadConnNoWrite
@@ -174,6 +180,7 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			mc.cleanup()
 			errLog.Print(err)
 		}
+
 		return ErrInvalidConn
 	}
 }
@@ -440,13 +447,17 @@ func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
 	// Reset Packet Sequence
 	mc.sequence = 0
 
+	//一位cmd + arg 也就是真实的查询语句
 	pktLen := 1 + len(arg)
+	//复用缓冲区
 	data, err := mc.buf.takeBuffer(pktLen + 4)
 	if err != nil {
 		// cannot take the buffer. Something must be wrong with the connection
 		errLog.Print(err)
 		return errBadConnNoWrite
 	}
+
+	//[len, len, len, seq, cmd, arg]
 
 	// Add command byte
 	data[4] = command
@@ -521,11 +532,13 @@ func (mc *mysqlConn) readAuthResult() ([]byte, string, error) {
 
 // Returns error if Packet is not an 'Result OK'-Packet
 func (mc *mysqlConn) readResultOK() error {
+	//读网络包,不解析
 	data, err := mc.readPacket()
 	if err != nil {
 		return err
 	}
 
+	// 第一个字节是 OK 表示成功
 	if data[0] == iOK {
 		return mc.handleOkPacket(data)
 	}
@@ -534,15 +547,16 @@ func (mc *mysqlConn) readResultOK() error {
 
 // Result Set Header Packet
 // http://dev.mysql.com/doc/internals/en/com-query-response.html#packet-ProtocolText::Resultset
+// 读取 CMD_QUERY 返回的结果
 func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 	data, err := mc.readPacket()
 	if err == nil {
 		switch data[0] {
 
-		case iOK:
+		case iOK:		//增删改命令
 			return 0, mc.handleOkPacket(data)
 
-		case iERR:
+		case iERR:		//发生错误
 			return 0, mc.handleErrorPacket(data)
 
 		case iLocalInFile:
@@ -551,7 +565,9 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 
 		// column count
 		num, _, n := readLengthEncodedInteger(data)
+		// 长度匹配
 		if n-len(data) == 0 {
+			//返回列数量
 			return int(num), nil
 		}
 
@@ -633,9 +649,11 @@ func (mc *mysqlConn) handleOkPacket(data []byte) error {
 
 // Read Packets as Field Packets until EOF-Packet or an Error appears
 // http://dev.mysql.com/doc/internals/en/com-query-response.html#packet-Protocol::ColumnDefinition41
+//
 func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 	columns := make([]mysqlField, count)
 
+	// 死循环
 	for i := 0; ; i++ {
 		data, err := mc.readPacket()
 		if err != nil {
@@ -853,6 +871,7 @@ func (stmt *mysqlStmt) readPrepareResultPacket() (uint16, error) {
 }
 
 // http://dev.mysql.com/doc/internals/en/com-stmt-send-long-data.html
+// 发送大段 BLOB 数据
 func (stmt *mysqlStmt) writeCommandLongData(paramID int, arg []byte) error {
 	maxLen := stmt.mc.maxAllowedPacket - 1
 	pktLen := maxLen
@@ -904,7 +923,7 @@ func (stmt *mysqlStmt) writeCommandLongData(paramID int, arg []byte) error {
 	return nil
 }
 
-// Execute Prepared Statement
+// Execute Prepared Statement 执行预处理语句
 // http://dev.mysql.com/doc/internals/en/com-stmt-execute.html
 func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 	if len(args) != stmt.paramCount {

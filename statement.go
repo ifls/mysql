@@ -22,6 +22,7 @@ type mysqlStmt struct {
 	paramCount int
 }
 
+//发送语句关闭命令
 func (stmt *mysqlStmt) Close() error {
 	if stmt.mc == nil || stmt.mc.closed.IsSet() {
 		// driver.Stmt.Close can be called more than once, thus this function

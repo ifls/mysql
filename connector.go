@@ -18,7 +18,7 @@ type connector struct {
 	cfg *Config // immutable private copy.
 }
 
-// Connect implements 标准库driver.Connector interface.
+// Connect implements 标准库里 driver.Connector interface.
 // Connect returns a connection to the database. 返回一个数据库连接
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	var err error

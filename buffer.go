@@ -35,6 +35,7 @@ type buffer struct {
 
 // newBuffer allocates and returns a new buffer.
 func newBuffer(nc net.Conn) buffer {
+	//4KB
 	fg := make([]byte, defaultBufSize)
 	return buffer{
 		buf:  fg,

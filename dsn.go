@@ -30,7 +30,7 @@ var (
 	errInvalidDSNUnsafeCollation = errors.New("invalid DSN: interpolateParams can not be used with unsafe collations")
 )
 
-// Config is a configuration parsed from a DSN string.
+// Config is a configuration parsed from a DSN string. (data source name)
 // If a new Config is created instead of being parsed from a DSN string,
 // the NewConfig function should be used, which sets default values.
 type Config struct {
@@ -39,14 +39,20 @@ type Config struct {
 	Net              string            // Network type
 	Addr             string            // Network address (requires Net)
 	DBName           string            // Database name
+
 	Params           map[string]string // Connection parameters
-	Collation        string            // Connection collation
+	Collation        string            // 排序规则 Connection collation
+
 	Loc              *time.Location    // Location for time.Time values
-	MaxAllowedPacket int               // Max packet size allowed
+
+	MaxAllowedPacket int               // 最大4<<20 4MB Max packet size allowed
+
 	ServerPubKey     string            // Server public key name
 	pubKey           *rsa.PublicKey    // Server public key
+
 	TLSConfig        string            // TLS configuration name
 	tls              *tls.Config       // TLS configuration
+
 	Timeout          time.Duration     // Dial timeout
 	ReadTimeout      time.Duration     // I/O read timeout
 	WriteTimeout     time.Duration     // I/O write timeout
