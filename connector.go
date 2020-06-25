@@ -18,8 +18,8 @@ type connector struct {
 	cfg *Config // immutable private copy.
 }
 
-// Connect implements driver.Connector interface.
-// Connect returns a connection to the database.
+// Connect implements 标准库driver.Connector interface.
+// Connect returns a connection to the database. 返回一个数据库连接
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	var err error
 
@@ -43,9 +43,11 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			dctx, cancel = context.WithTimeout(ctx, c.cfg.Timeout)
 			defer cancel()
 		}
+		//使用设置的拨号器
 		mc.netConn, err = dial(dctx, mc.cfg.Addr)
 	} else {
 		nd := net.Dialer{Timeout: mc.cfg.Timeout}
+		//默认拨号器
 		mc.netConn, err = nd.DialContext(ctx, mc.cfg.Net, mc.cfg.Addr)
 	}
 

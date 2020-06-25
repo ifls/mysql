@@ -22,7 +22,7 @@ import (
 
 type mysqlConn struct {
 	buf              buffer
-	netConn          net.Conn
+	netConn          net.Conn	//到服务器的tcp连接
 	rawConn          net.Conn // underlying connection when netConn is TLS connection.
 	affectedRows     uint64
 	insertId         uint64
