@@ -97,6 +97,7 @@ func (b *buffer) fill(need int) error {
 				continue
 			}
 			b.length = n
+			printBytes("read", b.buf[:b.length])
 			return nil
 
 		case io.EOF:

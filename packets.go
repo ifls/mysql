@@ -152,7 +152,8 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			}
 		}
 
-		//写出包
+		//写出包 唯一发送包的地址
+		printBytes("send", data[:4+size])
 		n, err := mc.netConn.Write(data[:4+size])
 		if err == nil && n == 4+size {
 			mc.sequence++
@@ -553,10 +554,10 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 	if err == nil {
 		switch data[0] {
 
-		case iOK:		//增删改命令
+		case iOK: //增删改命令
 			return 0, mc.handleOkPacket(data)
 
-		case iERR:		//发生错误
+		case iERR: //发生错误
 			return 0, mc.handleErrorPacket(data)
 
 		case iLocalInFile:
