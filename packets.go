@@ -22,7 +22,7 @@ import (
 )
 
 // Packets documentation:
-// http://dev.mysql.com/doc/internals/en/client-server-protocol.html
+// todo http://dev.mysql.com/doc/internals/en/client-server-protocol.html
 
 // Read packet to buffer 'data'
 func (mc *mysqlConn) readPacket() ([]byte, error) {
@@ -557,10 +557,10 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 	if err == nil {
 		switch data[0] {
 
-		case iOK:		//增删改命令
+		case iOK: //增删改命令
 			return 0, mc.handleOkPacket(data)
 
-		case iERR:		//发生错误
+		case iERR: //发生错误
 			return 0, mc.handleErrorPacket(data)
 
 		case iLocalInFile:
