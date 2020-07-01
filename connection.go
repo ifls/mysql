@@ -21,27 +21,27 @@ import (
 )
 
 type mysqlConn struct {
-	buf              buffer
+	buf buffer
 
-	netConn          net.Conn	// 到服务器的tcp连接
-	rawConn          net.Conn   // 是 tls 时, 保存原始的net.Conn underlying connection when netConn is TLS connection.
+	netConn net.Conn // 到服务器的tcp连接
+	rawConn net.Conn // 是 tls 时, 保存原始的net.Conn underlying connection when netConn is TLS connection.
 
-	affectedRows     uint64
-	insertId         uint64
+	affectedRows uint64
+	insertId     uint64
 
-	cfg              *Config
+	cfg *Config
 
-	maxAllowedPacket int
-	maxWriteSize     int
+	maxAllowedPacket int //config 最大包size
+	maxWriteSize     int //最大输出包size
 
-	writeTimeout     time.Duration
+	writeTimeout time.Duration // config.writeTimeout
 
-	flags            clientFlag
-	status           statusFlag
+	flags  clientFlag //服务器发生给客户端的
+	status statusFlag //最新一次请求, 服务器返回的状态
 
-	sequence         uint8	//一个命令拆分多个包时,需要标记 第一个, 新的命令会重置为1
-	parseTime        bool
-	reset            bool // set when the Go SQL package calls ResetSession
+	sequence  uint8 //一个命令拆分多个包时,需要标记 第一个, 新的命令会重置为1
+	parseTime bool  //config.ParseTime 是否解析 时间类型
+	reset     bool  // 重置超时, set when the Go SQL package calls ResetSession
 
 	// for context support (Go 1.8+)
 	watching bool
@@ -357,6 +357,8 @@ func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, err
 		}
 		query = prepared
 	}
+
+	// 执行命令前reset
 	mc.affectedRows = 0
 	mc.insertId = 0
 
@@ -372,7 +374,7 @@ func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, err
 
 // Internal function to execute commands
 func (mc *mysqlConn) exec(query string) error {
-	// Send command
+	// Send command 发到服务器
 	if err := mc.writeCommandPacketStr(comQuery, query); err != nil {
 		return mc.markBadConn(err)
 	}

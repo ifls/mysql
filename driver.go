@@ -40,7 +40,7 @@ type DialContextFunc func(ctx context.Context, addr string) (net.Conn, error)
 
 var (
 	dialsLock sync.RWMutex
-	dials     map[string]DialContextFunc
+	dials     map[string]DialContextFunc //tcp/ ucp / ip 用不同的拨号函数
 )
 
 // RegisterDialContext registers a custom dial function. It can then be used by the

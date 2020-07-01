@@ -142,7 +142,7 @@ func (b *buffer) takeBuffer(length int) ([]byte, error) {
 		return b.buf[:length], nil
 	}
 
-	if length < maxPacketSize {
+	if length < maxPacketSize { //16M
 		b.buf = make([]byte, length)
 		return b.buf, nil
 	}

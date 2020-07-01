@@ -137,25 +137,27 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			size = maxPacketSize
 		} else {
 			//三B长度 小端序
-			data[0] = byte(pktLen)
+			data[0] = byte(pktLen) //第1B是地位值
 			data[1] = byte(pktLen >> 8)
 			data[2] = byte(pktLen >> 16)
 			size = pktLen
 		}
-		//1B序号
+		//1B 序号
 		data[3] = mc.sequence
 
 		// Write packet
 		if mc.writeTimeout > 0 {
+			//设置写超时
 			if err := mc.netConn.SetWriteDeadline(time.Now().Add(mc.writeTimeout)); err != nil {
 				return err
 			}
 		}
 
-		//写出包
+		//写出包 len, len, len, seq, cmd,
 		n, err := mc.netConn.Write(data[:4+size])
 		if err == nil && n == 4+size {
 			mc.sequence++
+			// 判断是否满包
 			if size != maxPacketSize {
 				return nil
 			}
@@ -165,7 +167,7 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 		}
 
 		// Handle error
-		if err == nil { // n != len(data)
+		if err == nil { // n != len(data) 没发完
 			mc.cleanup()
 			errLog.Print(ErrMalformPkt)
 		} else {
@@ -189,8 +191,8 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 *                           Initialization Process                            *
 ******************************************************************************/
 
-// Handshake Initialization Packet
-// http://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
+// Handshake Initialization Packet 服务器连接上的时候主动向客户端发 握手包
+// TODO http://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
 func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err error) {
 	data, err = mc.readPacket()
 	if err != nil {
@@ -444,10 +446,10 @@ func (mc *mysqlConn) writeCommandPacket(command byte) error {
 }
 
 func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
-	// Reset Packet Sequence
+	// 新命令的第一个包 Reset Packet Sequence
 	mc.sequence = 0
 
-	//一位cmd + arg 也就是真实的查询语句
+	//1B cmd + arg 也就是真实的查询语句
 	pktLen := 1 + len(arg)
 	//复用缓冲区
 	data, err := mc.buf.takeBuffer(pktLen + 4)
@@ -553,10 +555,10 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 	if err == nil {
 		switch data[0] {
 
-		case iOK:		//增删改命令
+		case iOK: //增删改命令
 			return 0, mc.handleOkPacket(data)
 
-		case iERR:		//发生错误
+		case iERR: //发生错误
 			return 0, mc.handleErrorPacket(data)
 
 		case iLocalInFile:
@@ -624,7 +626,7 @@ func readStatus(b []byte) statusFlag {
 }
 
 // Ok Packet
-// http://dev.mysql.com/doc/internals/en/generic-response-packets.html#packet-OK_Packet
+// TODO http://dev.mysql.com/doc/internals/en/generic-response-packets.html#packet-OK_Packet
 func (mc *mysqlConn) handleOkPacket(data []byte) error {
 	var n, m int
 

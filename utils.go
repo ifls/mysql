@@ -722,18 +722,16 @@ func escapeStringQuotes(buf []byte, v string) []byte {
 *                               Sync utils                                    *
 ******************************************************************************/
 
-// noCopy may be embedded into structs which must not be copied
-// after the first use.
+// noCopy may be embedded into structs which must not be copied after the first use.
 //
-// See https://github.com/golang/go/issues/8005#issuecomment-190753527
+// See TODO https://github.com/golang/go/issues/8005#issuecomment-190753527
 // for details.
 type noCopy struct{}
 
 // Lock is a no-op used by -copylocks checker from `go vet`.
 func (*noCopy) Lock() {}
 
-// atomicBool is a wrapper around uint32 for usage as a boolean value with
-// atomic access.
+// atomicBool is a wrapper around uint32 for usage as a boolean value with atomic access.
 type atomicBool struct {
 	_noCopy noCopy
 	value   uint32
