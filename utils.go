@@ -16,6 +16,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -805,4 +807,41 @@ func mapIsolationLevel(level driver.IsolationLevel) (string, error) {
 	default:
 		return "", fmt.Errorf("mysql: unsupported isolation level: %v", level)
 	}
+}
+
+func printBytes(source string, data []byte) {
+	len2 := math.MaxInt32
+	if source == "read" {
+		len2 = len(data) - 4
+	} else if source == "send" {
+		len2 = len(data) - 4
+	}
+	add := 60
+	//if len2 > 0x100 {
+	//	add = -8
+	//}
+	s := fmt.Sprintf("%s len = 0x%x(%d)", source, len2, len2+add)
+	if source == "send" {
+		s += fmt.Sprintf(" cmd=%d(0x%x) name=%s", data[4], data[4], cmdName[data[4]])
+	}
+	s += "\n"
+	//i := 0
+	//for _, b := range data {
+	//	i++
+	//	s += fmt.Sprintf("%02x ", b)
+	//	if i % 8 == 0 {
+	//		s += "  "
+	//	}
+	//	if i % 16 == 0 {
+	//		s += "\n"
+	//	}
+	//
+	//}
+	if len(data) > 0 {
+		s = s[:len(s)-1]
+	}
+	s += ""
+	log.SetPrefix("mysql -> ")
+	log.Println(s)
+	log.SetPrefix("")
 }
