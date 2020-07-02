@@ -51,7 +51,7 @@ func (b *buffer) flip() {
 	b.flipcnt += 1
 }
 
-// fill reads into the buffer until at least _need_ bytes are in it
+// fill reads into the buffer until at least至少 _need_ bytes are in it
 func (b *buffer) fill(need int) error {
 	n := b.length
 	// fill data into its double-buffering target: if we've called
@@ -75,6 +75,7 @@ func (b *buffer) fill(need int) error {
 	// if we're filling the fg buffer, move the existing data to the start of it.
 	// if we're filling the bg buffer, copy over the data
 	if n > 0 {
+		//左移
 		copy(dest[:n], b.buf[b.idx:])
 	}
 
@@ -83,11 +84,12 @@ func (b *buffer) fill(need int) error {
 
 	for {
 		if b.timeout > 0 {
+			//设置读超时
 			if err := b.nc.SetReadDeadline(time.Now().Add(b.timeout)); err != nil {
 				return err
 			}
 		}
-
+		// 新的数据放到 pos n 后面
 		nn, err := b.nc.Read(b.buf[n:])
 		n += nn
 
@@ -143,7 +145,7 @@ func (b *buffer) takeBuffer(length int) ([]byte, error) {
 		return b.buf[:length], nil
 	}
 
-	if length < maxPacketSize {
+	if length < maxPacketSize { //16M
 		b.buf = make([]byte, length)
 		return b.buf, nil
 	}

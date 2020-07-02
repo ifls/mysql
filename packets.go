@@ -22,13 +22,13 @@ import (
 )
 
 // Packets documentation:
-// http://dev.mysql.com/doc/internals/en/client-server-protocol.html
+// todo http://dev.mysql.com/doc/internals/en/client-server-protocol.html
 
-// Read packet to buffer 'data'
+// Read packet to buffer 'data'  读出一个完整的包 不算前面的 3B len 和 1B sequence
 func (mc *mysqlConn) readPacket() ([]byte, error) {
 	var prevData []byte
 	for {
-		// read packet header
+		// read packet header 从缓冲去读下面的4个字节
 		data, err := mc.buf.readNext(4)
 		if err != nil {
 			if cerr := mc.canceled.Value(); cerr != nil {
@@ -42,7 +42,7 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 		// packet length [24 bit]
 		pktLen := int(uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16)
 
-		// check packet sync [8 bit]
+		// check packet sync [8 bit]  序号对不上
 		if data[3] != mc.sequence {
 			if data[3] > mc.sequence {
 				return nil, ErrPktSyncMul
@@ -51,8 +51,8 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 		}
 		mc.sequence++
 
-		// packets with length 0 terminate a previous packet which is a
-		// multiple of (2^24)-1 bytes long
+		// packets with length 0 terminate a previous packet which is a multiple of (2^24)-1 bytes long
+		// 长度 为0的包代表1-n个满包的结束, 如果只是一个单纯的空包。 那就是错误
 		if pktLen == 0 {
 			// there was no previous packet
 			if prevData == nil {
@@ -64,7 +64,7 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 			return prevData, nil
 		}
 
-		// read packet body [pktLen bytes]
+		// read packet body [pktLen bytes] 读包
 		data, err = mc.buf.readNext(pktLen)
 		if err != nil {
 			if cerr := mc.canceled.Value(); cerr != nil {
@@ -137,26 +137,29 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			size = maxPacketSize
 		} else {
 			//三B长度 小端序
-			data[0] = byte(pktLen)
+			data[0] = byte(pktLen) //第1B是地位值
 			data[1] = byte(pktLen >> 8)
 			data[2] = byte(pktLen >> 16)
 			size = pktLen
 		}
-		//1B序号
+		//1B 序号
 		data[3] = mc.sequence
 
 		// Write packet
 		if mc.writeTimeout > 0 {
+			//设置写超时
 			if err := mc.netConn.SetWriteDeadline(time.Now().Add(mc.writeTimeout)); err != nil {
 				return err
 			}
 		}
 
+		//写出包 len, len, len, seq, cmd,
 		//写出包 唯一发送包的地址
 		printBytes("send", data[:4+size])
 		n, err := mc.netConn.Write(data[:4+size])
 		if err == nil && n == 4+size {
 			mc.sequence++
+			// 判断是否满包
 			if size != maxPacketSize {
 				return nil
 			}
@@ -166,7 +169,7 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 		}
 
 		// Handle error
-		if err == nil { // n != len(data)
+		if err == nil { // n != len(data) 没发完
 			mc.cleanup()
 			errLog.Print(ErrMalformPkt)
 		} else {
@@ -190,8 +193,8 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 *                           Initialization Process                            *
 ******************************************************************************/
 
-// Handshake Initialization Packet
-// http://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
+// Handshake Initialization Packet 服务器连接上的时候主动向客户端发 握手包
+// TODO http://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
 func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err error) {
 	data, err = mc.readPacket()
 	if err != nil {
@@ -445,10 +448,10 @@ func (mc *mysqlConn) writeCommandPacket(command byte) error {
 }
 
 func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
-	// Reset Packet Sequence
+	// 新命令的第一个包 Reset Packet Sequence
 	mc.sequence = 0
 
-	//一位cmd + arg 也就是真实的查询语句
+	//1B cmd + arg 也就是真实的查询语句
 	pktLen := 1 + len(arg)
 	//复用缓冲区
 	data, err := mc.buf.takeBuffer(pktLen + 4)
@@ -836,6 +839,8 @@ func (mc *mysqlConn) readUntilEOF() error {
 			}
 			return nil
 		}
+
+		// ok包, 不处理？
 	}
 }
 
@@ -856,13 +861,13 @@ func (stmt *mysqlStmt) readPrepareResultPacket() (uint16, error) {
 		// statement id [4 bytes]
 		stmt.id = binary.LittleEndian.Uint32(data[1:5])
 
-		// Column count [16 bit uint]
+		// Column (field count) count [16 bit uint]
 		columnCount := binary.LittleEndian.Uint16(data[5:7])
 
 		// Param count [16 bit uint]
 		stmt.paramCount = int(binary.LittleEndian.Uint16(data[7:9]))
 
-		// Reserved [8 bit]
+		// Reserved [8 bit] 0x00
 
 		// Warning count [16 bit uint]
 

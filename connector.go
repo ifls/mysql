@@ -55,7 +55,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		return nil, err
 	}
 
-	// Enable TCP Keepalives on TCP connections
+	// Enable TCP Keepalives on TCP connections 如果是tcp 连接 开启tcp keepalive
 	if tc, ok := mc.netConn.(*net.TCPConn); ok {
 		if err := tc.SetKeepAlive(true); err != nil {
 			// Don't send COM_QUIT before handshake.
@@ -65,9 +65,10 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		}
 	}
 
-	// Call startWatcher for context support (From Go 1.8)
+	// Call startWatcher for context support (From Go 1.8) 等待其他事件完成？
 	mc.startWatcher()
 	if err := mc.watchCancel(ctx); err != nil {
+		//关闭连接
 		mc.cleanup()
 		return nil, err
 	}
@@ -102,6 +103,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, err
 		}
 	}
+	//client -> server 回复握手
 	if err = mc.writeHandshakeResponsePacket(authResp, plugin); err != nil {
 		mc.cleanup()
 		return nil, err
@@ -131,7 +133,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		mc.maxWriteSize = mc.maxAllowedPacket
 	}
 
-	// Handle DSN Params
+	// Handle DSN Params 向服务器发执行命令 设置参数
 	err = mc.handleParams()
 	if err != nil {
 		mc.Close()

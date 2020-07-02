@@ -63,6 +63,7 @@ func (stmt *mysqlStmt) Exec(args []driver.Value) (driver.Result, error) {
 
 	mc := stmt.mc
 
+	// 执行前reset
 	mc.affectedRows = 0
 	mc.insertId = 0
 

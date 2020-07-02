@@ -724,18 +724,16 @@ func escapeStringQuotes(buf []byte, v string) []byte {
 *                               Sync utils                                    *
 ******************************************************************************/
 
-// noCopy may be embedded into structs which must not be copied
-// after the first use.
+// noCopy may be embedded into structs which must not be copied after the first use.
 //
-// See https://github.com/golang/go/issues/8005#issuecomment-190753527
+// See TODO https://github.com/golang/go/issues/8005#issuecomment-190753527
 // for details.
 type noCopy struct{}
 
 // Lock is a no-op used by -copylocks checker from `go vet`.
 func (*noCopy) Lock() {}
 
-// atomicBool is a wrapper around uint32 for usage as a boolean value with
-// atomic access.
+// atomicBool is a wrapper around uint32 for usage as a boolean value with atomic access.
 type atomicBool struct {
 	_noCopy noCopy
 	value   uint32
@@ -822,9 +820,13 @@ func printBytes(source string, data []byte) {
 	//if len2 > 0x100 {
 	//	add = -8
 	//}
-	s := fmt.Sprintf("%s len = 0x%x(%d)", source, len2, len2+add)
+	s := fmt.Sprintf("%s len = 0x%x(frame=%d) ", source, len2, len2+add)
+
+	packetLength := data[0]
+	packetLength += data[1] << 8
+	packetLength += data[2] << 16
 	if source == "send" {
-		s += fmt.Sprintf(" cmd=%d(0x%x) name=%s", data[4], data[4], cmdName[data[4]])
+		s += fmt.Sprintf("len=0x%x(%d)  sequence=%d cmd=%d(0x%x) name=%s", packetLength, packetLength, data[3], data[4], data[4], cmdName[data[4]])
 	}
 	s += "\n"
 	//i := 0

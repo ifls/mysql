@@ -34,28 +34,28 @@ var (
 // If a new Config is created instead of being parsed from a DSN string,
 // the NewConfig function should be used, which sets default values.
 type Config struct {
-	User             string            // Username
-	Passwd           string            // Password (requires User)
-	Net              string            // Network type
-	Addr             string            // Network address (requires Net)
-	DBName           string            // Database name
+	User   string // Username
+	Passwd string // Password (requires User)
+	Net    string // Network type
+	Addr   string // Network address (requires Net)
+	DBName string // Database name
 
-	Params           map[string]string // Connection parameters
-	Collation        string            // 排序规则 Connection collation
+	Params    map[string]string // Connection parameters
+	Collation string            // 排序规则 Connection collation
 
-	Loc              *time.Location    // Location for time.Time values
+	Loc *time.Location // Location for time.Time values 时区
 
-	MaxAllowedPacket int               // 最大4<<20 4MB Max packet size allowed
+	MaxAllowedPacket int // 单个网络包 最大4<<20 4MB Max packet size allowed
 
-	ServerPubKey     string            // Server public key name
-	pubKey           *rsa.PublicKey    // Server public key
+	ServerPubKey string         // Server public key name
+	pubKey       *rsa.PublicKey // Server public key
 
-	TLSConfig        string            // TLS configuration name
-	tls              *tls.Config       // TLS configuration
+	TLSConfig string      // TLS configuration name
+	tls       *tls.Config // TLS configuration
 
-	Timeout          time.Duration     // Dial timeout
-	ReadTimeout      time.Duration     // I/O read timeout
-	WriteTimeout     time.Duration     // I/O write timeout
+	Timeout      time.Duration // 拨号超时 Dial timeout
+	ReadTimeout  time.Duration // I/O read timeout
+	WriteTimeout time.Duration // I/O write timeout
 
 	AllowAllFiles           bool // Allow all files to be used with LOAD DATA LOCAL INFILE
 	AllowCleartextPasswords bool // Allows the cleartext client side plugin
