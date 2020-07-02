@@ -46,7 +46,7 @@ type mysqlConn struct {
 	// for context support (Go 1.8+)
 	watching bool
 	watcher  chan<- context.Context
-	closech  chan struct{}
+	closech  chan struct{} //通知tcp连接已关闭
 	finished chan<- struct{}
 
 	canceled atomicError // set non-nil if conn is canceled
@@ -62,8 +62,8 @@ func (mc *mysqlConn) handleParams() (err error) {
 		case "charset":
 			charsets := strings.Split(val, ",")
 			for i := range charsets {
-				// ignore errors here - a charset may not exist
-				err = mc.exec("SET NAMES " + charsets[i])
+				// ignore errors here - a charset may not exist 只有一个用得上
+				err = mc.exec("SET NAMES " + charsets[i]) //直接执行
 				if err == nil {
 					break
 				}
@@ -72,7 +72,7 @@ func (mc *mysqlConn) handleParams() (err error) {
 				return
 			}
 
-		// Other system vars accumulated in a single SET command
+		// 其他的拼起来, 执行 Other system vars accumulated in a single SET command
 		default:
 			if cmdSet.Len() == 0 {
 				// Heuristic: 29 chars for each other key=value to reduce reallocations
@@ -88,6 +88,7 @@ func (mc *mysqlConn) handleParams() (err error) {
 	}
 
 	if cmdSet.Len() > 0 {
+		// 执行charsets 以外的设置
 		err = mc.exec(cmdSet.String())
 		if err != nil {
 			return
@@ -113,6 +114,7 @@ func (mc *mysqlConn) Begin() (driver.Tx, error) {
 }
 
 func (mc *mysqlConn) begin(readOnly bool) (driver.Tx, error) {
+	//已关闭连接
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
@@ -152,8 +154,9 @@ func (mc *mysqlConn) cleanup() {
 		return
 	}
 
-	// Makes cleanup idempotent
+	// Makes cleanup idempotent 并没有主动置为nil, 无法保证幂等
 	close(mc.closech)
+	// 防止没初始化
 	if mc.netConn == nil {
 		return
 	}
@@ -488,10 +491,13 @@ func (mc *mysqlConn) cancel(err error) {
 }
 
 // finish is called when the query has succeeded.
+// 阻塞知道 命令执行, 收到了结果
 func (mc *mysqlConn) finish() {
 	if !mc.watching || mc.finished == nil {
 		return
 	}
+
+	// 阻塞直到被接收, 或者接收到关闭信号
 	select {
 	case mc.finished <- struct{}{}:
 		mc.watching = false
@@ -666,7 +672,7 @@ func (mc *mysqlConn) startWatcher() {
 			var ctx context.Context
 			select {
 			case ctx = <-watcher:
-			case <-mc.closech:
+			case <-mc.closech: // 连接已关闭，退出
 				return
 			}
 
