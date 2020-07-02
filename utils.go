@@ -531,7 +531,7 @@ func readLengthEncodedInteger(b []byte) (uint64, bool, int) {
 	}
 
 	switch b[0] {
-	// 251: NULL
+	// 251: NULL  表示值是 NULL
 	case 0xfb:
 		return 0, true, 1
 

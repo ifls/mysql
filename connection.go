@@ -428,6 +428,7 @@ func (mc *mysqlConn) query(query string, args []driver.Value) (*textRows, error)
 	if err == nil {
 		// Read Result
 		var resLen int
+		// 读取 列数
 		resLen, err = mc.readResultSetHeaderPacket()
 		if err == nil {
 			rows := new(textRows)
