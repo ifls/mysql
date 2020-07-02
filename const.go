@@ -136,8 +136,8 @@ type fieldType byte // 字段类型
 
 const (
 	fieldTypeDecimal   fieldType = iota //decimal
-	fieldTypeTiny                       //tiny
-	fieldTypeShort                      //short
+	fieldTypeTiny                       //tiny 1B
+	fieldTypeShort                      //short 2B
 	fieldTypeLong                       //long
 	fieldTypeFloat                      //float
 	fieldTypeDouble                     //double

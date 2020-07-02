@@ -15,83 +15,90 @@ import (
 
 func (mf *mysqlField) typeDatabaseName() string {
 	switch mf.fieldType {
-	case fieldTypeBit:
-		return "BIT"
-	case fieldTypeBLOB:
-		if mf.charSet != collations[binaryCollation] {
-			return "TEXT"
-		}
-		return "BLOB"
-	case fieldTypeDate:
-		return "DATE"
-	case fieldTypeDateTime:
-		return "DATETIME"
-	case fieldTypeDecimal:
-		return "DECIMAL"
-	case fieldTypeDouble:
-		return "DOUBLE"
-	case fieldTypeEnum:
-		return "ENUM"
-	case fieldTypeFloat:
-		return "FLOAT"
-	case fieldTypeGeometry:
-		return "GEOMETRY"
-	case fieldTypeInt24:
-		return "MEDIUMINT"
-	case fieldTypeJSON:
-		return "JSON"
-	case fieldTypeLong:
-		return "INT"
-	case fieldTypeLongBLOB:
-		if mf.charSet != collations[binaryCollation] {
-			return "LONGTEXT"
-		}
-		return "LONGBLOB"
-	case fieldTypeLongLong:
-		return "BIGINT"
-	case fieldTypeMediumBLOB:
-		if mf.charSet != collations[binaryCollation] {
-			return "MEDIUMTEXT"
-		}
-		return "MEDIUMBLOB"
-	case fieldTypeNewDate:
-		return "DATE"
-	case fieldTypeNewDecimal:
-		return "DECIMAL"
-	case fieldTypeNULL:
-		return "NULL"
-	case fieldTypeSet:
-		return "SET"
-	case fieldTypeShort:
-		return "SMALLINT"
-	case fieldTypeString:
-		if mf.charSet == collations[binaryCollation] {
-			return "BINARY"
-		}
-		return "CHAR"
-	case fieldTypeTime:
-		return "TIME"
-	case fieldTypeTimestamp:
-		return "TIMESTAMP"
-	case fieldTypeTiny:
+	// 数值
+	case fieldTypeTiny: //1B
 		return "TINYINT"
-	case fieldTypeTinyBLOB:
+	case fieldTypeShort: //2B
+		return "SMALLINT"
+	case fieldTypeInt24: //3B
+		return "MEDIUMINT"
+	case fieldTypeLong: //4B
+		return "INT"
+	case fieldTypeLongLong: // 8B
+		return "BIGINT"
+	case fieldTypeFloat: //4B
+		return "FLOAT"
+	case fieldTypeDouble: //8B
+		return "DOUBLE"
+	case fieldTypeDecimal: // decimal(m, d) (max(m,d) + 2)B
+		return "DECIMAL"
+	// 字符串
+	case fieldTypeString: // 定长 字符串 [0-255]B
+		if mf.charSet == collations[binaryCollation] {
+			return "BINARY" // 二进制, []byte
+		}
+		return "CHAR" //字符数组, 需要指定编码集
+	case fieldTypeVarChar: //同下
+		if mf.charSet == collations[binaryCollation] {
+			return "VARBINARY"
+		}
+		return "VARCHAR"
+	case fieldTypeVarString: //变长字符串 [0-65535]B char(n) varchar(n) 表示 字符的个数, 不是字节数
+		if mf.charSet == collations[binaryCollation] {
+			return "VARBINARY"
+		}
+		return "VARCHAR"
+	case fieldTypeTinyBLOB: // 定长字节块 [0-255]B
 		if mf.charSet != collations[binaryCollation] {
 			return "TINYTEXT"
 		}
 		return "TINYBLOB"
-	case fieldTypeVarChar:
-		if mf.charSet == collations[binaryCollation] {
-			return "VARBINARY"
+	case fieldTypeBLOB: //[0-2^16]B
+		if mf.charSet != collations[binaryCollation] {
+			return "TEXT" //text 是文本
 		}
-		return "VARCHAR"
-	case fieldTypeVarString:
-		if mf.charSet == collations[binaryCollation] {
-			return "VARBINARY"
+		return "BLOB" // blob 是二进制块
+	case fieldTypeMediumBLOB: // [0-2^24]B
+		if mf.charSet != collations[binaryCollation] {
+			return "MEDIUMTEXT"
 		}
-		return "VARCHAR"
-	case fieldTypeYear:
+		return "MEDIUMBLOB"
+	case fieldTypeLongBLOB: // [0-2^32]B
+		if mf.charSet != collations[binaryCollation] {
+			return "LONGTEXT"
+		}
+		return "LONGBLOB"
+
+	// 日期
+	case fieldTypeYear: //1B
 		return "YEAR"
+	case fieldTypeDate: //3B YYYY-MM-DD
+		return "DATE"
+	case fieldTypeTime: //3B HH:MM:SS
+		return "TIME"
+	case fieldTypeTimestamp: //4B unix 时间戳 秒级
+		return "TIMESTAMP"
+	case fieldTypeDateTime: //8B YYYY-MM-DD HH:MM:SS
+		return "DATETIME"
+	// 特殊
+	case fieldTypeBit: // 特殊的 BIT(m) 存储 m 位, 提供位操作
+		return "BIT"
+	case fieldTypeEnum: // 特殊 字符串类型的枚举定义
+		return "ENUM"
+	case fieldTypeGeometry: // 地理位置  point
+		return "GEOMETRY"
+	case fieldTypeJSON: //json 不能设定长度
+		return "JSON"
+	case fieldTypeNewDate: //?
+		return "DATE"
+	case fieldTypeNewDecimal: //?
+		return "DECIMAL"
+	case fieldTypeSet: // 集合
+		return "SET"
+
+	// NULL
+	case fieldTypeNULL: //NULL
+		return "NULL"
 	default:
 		return ""
 	}
@@ -120,7 +127,7 @@ type mysqlField struct {
 	name      string
 	length    uint32
 	flags     fieldFlag
-	fieldType fieldType
+	fieldType fieldType //字段类型
 	decimals  byte
 	charSet   uint8
 }
