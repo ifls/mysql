@@ -6,16 +6,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this file,
 // You can obtain one at http://mozilla.org/MPL/2.0/.
 
+//排序规则的一些定义
 package mysql
 
+//默认排序规则
 const defaultCollation = "utf8mb4_general_ci"
 const binaryCollation = "binary"
 
 // A list of available collations mapped to the internal ID.
-// To update this map use the following MySQL query:
+// To update this map use the following MySQL query: 可以直接查询
 //     SELECT COLLATION_NAME, ID FROM information_schema.COLLATIONS WHERE ID<256 ORDER BY ID
 //
-// Handshake packet have only 1 byte for collation_id.  So we can't use collations with ID > 255.
+// Handshake packet have only 1 byte for collation_id. 握手包有一个字节 代码排序规则id
+// So we can't use collations with ID > 255.
 //
 // ucs2, utf16, and utf32 can't be used for connection charset.
 // https://dev.mysql.com/doc/refman/5.7/en/charset-connection.html#charset-connection-impermissible-client-charset
@@ -247,8 +250,8 @@ var collations = map[string]byte{
 	"utf8mb4_0900_ai_ci":       255,
 }
 
-// A denylist of collations which is unsafe to interpolate parameters.
-// These multibyte encodings may contains 0x5c (`\`) in their trailing bytes.
+// A denylist of collations which is unsafe to interpolate插入篡改 parameters.
+// These multibyte encodings may contains 0x5c (`\`) in their trailing尾部的 bytes.
 var unsafeCollations = map[string]bool{
 	"big5_chinese_ci":        true,
 	"sjis_japanese_ci":       true,

@@ -8,6 +8,7 @@
 
 package mysql
 
+// 读取数据包的函数实现
 import (
 	"bytes"
 	"crypto/tls"
@@ -565,7 +566,7 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 		case iERR: //发生错误
 			return 0, mc.handleErrorPacket(data)
 
-		case iLocalInFile:
+		case iLocalInFile: //???? 啥东西
 			return 0, mc.handleInFileRequest(string(data[1:]))
 		}
 
@@ -803,6 +804,7 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 					switch rows.rs.columns[i].fieldType {
 					case fieldTypeTimestamp, fieldTypeDateTime,
 						fieldTypeDate, fieldTypeNewDate:
+						//解析日期
 						dest[i], err = parseDateTime(
 							dest[i].([]byte),
 							mc.cfg.Loc,
@@ -1242,7 +1244,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			continue
 
 		// Numeric Types
-		case fieldTypeTiny:
+		case fieldTypeTiny: //1B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				dest[i] = int64(data[pos])
 			} else {
@@ -1251,7 +1253,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			pos++
 			continue
 
-		case fieldTypeShort, fieldTypeYear:
+		case fieldTypeShort, fieldTypeYear: //2B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				dest[i] = int64(binary.LittleEndian.Uint16(data[pos : pos+2]))
 			} else {
@@ -1260,7 +1262,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			pos += 2
 			continue
 
-		case fieldTypeInt24, fieldTypeLong:
+		case fieldTypeInt24, fieldTypeLong: //3B 4B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				dest[i] = int64(binary.LittleEndian.Uint32(data[pos : pos+4]))
 			} else {
@@ -1269,7 +1271,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			pos += 4
 			continue
 
-		case fieldTypeLongLong:
+		case fieldTypeLongLong: //8B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				val := binary.LittleEndian.Uint64(data[pos : pos+8])
 				if val > math.MaxInt64 {
@@ -1312,7 +1314,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			}
 			return err
 
-		case
+		case //读日期
 			fieldTypeDate, fieldTypeNewDate, // Date YYYY-MM-DD
 			fieldTypeTime,                         // Time [-][H]HH:MM:SS[.fractal]
 			fieldTypeTimestamp, fieldTypeDateTime: // Timestamp YYYY-MM-DD HH:MM:SS[.fractal]
@@ -1329,7 +1331,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 				var dstlen uint8
 				switch decimals := rows.rs.columns[i].decimals; decimals {
 				case 0x00, 0x1f:
-					dstlen = 8
+					dstlen = 8 //8B hh:mm:ss
 				case 1, 2, 3, 4, 5, 6:
 					dstlen = 8 + 1 + decimals
 				default:
@@ -1339,7 +1341,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 					)
 				}
 				dest[i], err = formatBinaryTime(data[pos:pos+int(num)], dstlen)
-			case rows.mc.parseTime:
+			case rows.mc.parseTime: //time.Time
 				dest[i], err = parseBinaryDateTime(num, data[pos:], rows.mc.cfg.Loc)
 			default:
 				var dstlen uint8
@@ -1348,7 +1350,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 				} else {
 					switch decimals := rows.rs.columns[i].decimals; decimals {
 					case 0x00, 0x1f:
-						dstlen = 19
+						dstlen = 19 // yyyy-mm-dd hh:mm:ss
 					case 1, 2, 3, 4, 5, 6:
 						dstlen = 19 + 1 + decimals
 					default:

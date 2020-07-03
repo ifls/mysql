@@ -132,8 +132,9 @@ var cmdName = map[byte]string{
 }
 
 // https://dev.mysql.com/doc/internals/en/com-query-response.html#packet-Protocol::ColumnType
-type fieldType byte // 字段类型
+type fieldType byte
 
+// 字段类型
 const (
 	fieldTypeDecimal   fieldType = iota //decimal
 	fieldTypeTiny                       //tiny 1B
@@ -170,19 +171,20 @@ const (
 
 type fieldFlag uint16
 
+// 字段 标志
 const (
-	flagNotNULL fieldFlag = 1 << iota
-	flagPriKey
-	flagUniqueKey
-	flagMultipleKey
-	flagBLOB
-	flagUnsigned
-	flagZeroFill
-	flagBinary
-	flagEnum
-	flagAutoIncrement
-	flagTimestamp
-	flagSet
+	flagNotNULL       fieldFlag = 1 << iota // not null
+	flagPriKey                              // primary key
+	flagUniqueKey                           // unique
+	flagMultipleKey                         // multiple key
+	flagBLOB                                //blob
+	flagUnsigned                            //unsigned
+	flagZeroFill                            //zero fill
+	flagBinary                              //binary
+	flagEnum                                //enum 类型
+	flagAutoIncrement                       //自增
+	flagTimestamp                           //时间戳
+	flagSet                                 //集合
 	flagUnknown1
 	flagUnknown2
 	flagUnknown3
@@ -192,19 +194,20 @@ const (
 // http://dev.mysql.com/doc/internals/en/status-flags.html
 type statusFlag uint16
 
+// 状态标志
 const (
-	statusInTrans      statusFlag = 1 << iota //a transaction is active
-	statusInAutocommit                        //auto commit is enabled
-	statusReserved                            // Not in documentation
-	statusMoreResultsExists
-	statusNoGoodIndexUsed
-	statusNoIndexUsed
-	statusCursorExists
-	statusLastRowSent
-	statusDbDropped
-	statusNoBackslashEscapes
-	statusMetadataChanged
-	statusQueryWasSlow
+	statusInTrans            statusFlag = 1 << iota //a transaction is active
+	statusInAutocommit                              //auto commit is enabled
+	statusReserved                                  // Not in documentation
+	statusMoreResultsExists                         // 更多资源
+	statusNoGoodIndexUsed                           //  没有好的索引可用
+	statusNoIndexUsed                               // 没有用索引
+	statusCursorExists                              // 存在游标
+	statusLastRowSent                               //最后一行已发送
+	statusDbDropped                                 // 库已删
+	statusNoBackslashEscapes                        // 无 \ 转义
+	statusMetadataChanged                           //元数据已经改变
+	statusQueryWasSlow                              // 慢查询
 	statusPsOutParams
 	statusInTransReadonly     //in a read-only transaction
 	statusSessionStateChanged //connection state information has changed

@@ -8,6 +8,7 @@
 
 package mysql
 
+// 实现 sql.Result接口
 type mysqlResult struct {
 	affectedRows int64
 	insertId     int64

@@ -241,7 +241,7 @@ func bToi(b byte) (int, error) {
 }
 
 func parseBinaryDateTime(num uint64, data []byte, loc *time.Location) (driver.Value, error) {
-	switch num {
+	switch num { //数长度
 	case 0:
 		return time.Time{}, nil
 	case 4:
@@ -531,27 +531,28 @@ func readLengthEncodedInteger(b []byte) (uint64, bool, int) {
 	}
 
 	switch b[0] {
-	// 251: NULL  表示值是 NULL
+	// 251: NULL  表示值是 NULL 0B
 	case 0xfb:
 		return 0, true, 1
 
-	// 252: value of following 2
+	// 252: value of following 2B
 	case 0xfc:
 		return uint64(b[1]) | uint64(b[2])<<8, false, 3
 
-	// 253: value of following 3
+	// 253: value of following 3B
 	case 0xfd:
 		return uint64(b[1]) | uint64(b[2])<<8 | uint64(b[3])<<16, false, 4
 
-	// 254: value of following 8
+	// 254: value of following 8B
 	case 0xfe:
 		return uint64(b[1]) | uint64(b[2])<<8 | uint64(b[3])<<16 |
 				uint64(b[4])<<24 | uint64(b[5])<<32 | uint64(b[6])<<40 |
 				uint64(b[7])<<48 | uint64(b[8])<<56,
 			false, 9
 	}
+	//255 0xff 不用?
 
-	// 0-250: value of first byte
+	// 0-250: value of first byte 1B
 	return uint64(b[0]), false, 1
 }
 
@@ -809,6 +810,7 @@ func mapIsolationLevel(level driver.IsolationLevel) (string, error) {
 	}
 }
 
+//自己写的, 打印发送和收到的数据
 func printBytes(source string, data []byte) {
 	len2 := math.MaxInt32
 	if source == "read" {

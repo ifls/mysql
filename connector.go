@@ -23,7 +23,7 @@ type connector struct {
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	var err error
 
-	// New mysqlConn
+	// New mysqlConn{}
 	mc := &mysqlConn{
 		maxAllowedPacket: maxPacketSize,
 		maxWriteSize:     maxPacketSize - 1,
@@ -65,7 +65,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		}
 	}
 
-	// Call startWatcher for context support (From Go 1.8) 等待其他事件完成？
+	// Call startWatcher for context support (From Go 1.8) 等待其他事件完成？???
 	mc.startWatcher()
 	if err := mc.watchCancel(ctx); err != nil {
 		//关闭连接
@@ -74,13 +74,14 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	}
 	defer mc.finish()
 
+	// 新建 缓存
 	mc.buf = newBuffer(mc.netConn)
 
 	// Set I/O timeouts
 	mc.buf.timeout = mc.cfg.ReadTimeout
 	mc.writeTimeout = mc.cfg.WriteTimeout
 
-	// Reading Handshake Initialization Packet
+	// 服务器连接后, 主动发握手包过来 Reading Handshake Initialization Packet
 	authData, plugin, err := mc.readHandshakePacket()
 	if err != nil {
 		mc.cleanup()
@@ -92,7 +93,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	}
 
 	// Send Client Authentication Packet
-	authResp, err := mc.auth(authData, plugin)
+	authResp, err := mc.auth(authData, plugin) //算认证信息
 	if err != nil {
 		// try the default auth plugin, if using the requested plugin failed
 		errLog.Print("could not use requested auth plugin '"+plugin+"': ", err.Error())
@@ -103,13 +104,13 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, err
 		}
 	}
-	//client -> server 回复握手
+	//client -> server 回复握手,发送认证
 	if err = mc.writeHandshakeResponsePacket(authResp, plugin); err != nil {
 		mc.cleanup()
 		return nil, err
 	}
 
-	// Handle response to auth packet, switch methods if possible
+	// 读取认证结果 Handle response to auth packet, switch methods if possible
 	if err = mc.handleAuthResult(authData, plugin); err != nil {
 		// Authentication failed and MySQL has already closed the connection
 		// (https://dev.mysql.com/doc/internals/en/authentication-fails.html).
@@ -121,7 +122,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	if mc.cfg.MaxAllowedPacket > 0 {
 		mc.maxAllowedPacket = mc.cfg.MaxAllowedPacket
 	} else {
-		// Get max allowed packet size
+		// Get max allowed packet size 客户端没配置, 从服务器读
 		maxap, err := mc.getSystemVar("max_allowed_packet")
 		if err != nil {
 			mc.Close()
@@ -144,7 +145,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 // Driver implements driver.Connector interface.
-// Driver returns &MySQLDriver{}.
+// Driver returns &MySQLDriver{}.  //返回固定的地址
 func (c *connector) Driver() driver.Driver {
 	return &MySQLDriver{}
 }

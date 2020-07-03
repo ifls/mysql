@@ -81,9 +81,11 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 }
 
 func init() {
+	// 注册驱动
 	sql.Register("mysql", &MySQLDriver{})
 }
 
+// 解析配置
 // NewConnector returns new driver.Connector.
 func NewConnector(cfg *Config) (driver.Connector, error) {
 	cfg = cfg.Clone()
@@ -95,6 +97,7 @@ func NewConnector(cfg *Config) (driver.Connector, error) {
 	return &connector{cfg: cfg}, nil
 }
 
+// 解析 dsn
 // OpenConnector implements driver.DriverContext.
 func (d MySQLDriver) OpenConnector(dsn string) (driver.Connector, error) {
 	cfg, err := ParseDSN(dsn)

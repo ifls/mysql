@@ -40,7 +40,7 @@ type Config struct {
 	Addr   string // Network address (requires Net)
 	DBName string // Database name
 
-	Params    map[string]string // Connection parameters
+	Params    map[string]string // 数据库名后面的 Connection parameters
 	Collation string            // 排序规则 Connection collation
 
 	Loc *time.Location // Location for time.Time values 时区
@@ -54,8 +54,8 @@ type Config struct {
 	tls       *tls.Config // TLS configuration
 
 	Timeout      time.Duration // 拨号超时 Dial timeout
-	ReadTimeout  time.Duration // I/O read timeout
-	WriteTimeout time.Duration // I/O write timeout
+	ReadTimeout  time.Duration // 读超时 I/O read timeout
+	WriteTimeout time.Duration // 写超时 I/O write timeout
 
 	AllowAllFiles           bool // Allow all files to be used with LOAD DATA LOCAL INFILE
 	AllowCleartextPasswords bool // Allows the cleartext client side plugin
@@ -156,6 +156,7 @@ func (cfg *Config) normalize() error {
 	return nil
 }
 
+// 写入kv 为参数格式
 func writeDSNParam(buf *bytes.Buffer, hasParam *bool, name, value string) {
 	buf.Grow(1 + len(name) + 1 + len(value))
 	if !*hasParam {
@@ -169,8 +170,8 @@ func writeDSNParam(buf *bytes.Buffer, hasParam *bool, name, value string) {
 	buf.WriteString(value)
 }
 
-// FormatDSN formats the given Config into a DSN string which can be passed to
-// the driver.
+// FormatDSN formats the given Config into a DSN string which can be passed to the driver.
+// config -> string
 func (cfg *Config) FormatDSN() string {
 	var buf bytes.Buffer
 
