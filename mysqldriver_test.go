@@ -8,7 +8,7 @@ import (
 )
 
 func TestMysqlConn_Begin(t *testing.T) {
-	dsn := "root:Wfs123456@tcp(127.0.0.1)/simple?timeout=1s"
+	dsn := "root@tcp(127.0.0.1)/simple?timeout=1s"
 	md := &MySQLDriver{}
 	conn, err := md.Open(dsn)
 	if err != nil {
@@ -26,8 +26,13 @@ func TestMysqlConn_Begin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for trs.Next(make([]driver.Value, 3)) == nil {
-
+	log.Printf("%#v\n", trs)
+	result := make([]driver.Value, len(trs.Columns())-2)
+	for trs.Next(result) == nil {
+		for _, res := range result {
+			log.Printf("%s\t", res)
+		}
+		log.Println()
 	}
 	log.Printf("%+v\n", trs.Columns())
 

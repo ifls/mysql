@@ -132,39 +132,40 @@ var cmdName = map[byte]string{
 }
 
 // https://dev.mysql.com/doc/internals/en/com-query-response.html#packet-Protocol::ColumnType
-type fieldType byte
+type fieldType byte // 字段类型
 
 const (
-	fieldTypeDecimal fieldType = iota
-	fieldTypeTiny
-	fieldTypeShort
-	fieldTypeLong
-	fieldTypeFloat
-	fieldTypeDouble
-	fieldTypeNULL
-	fieldTypeTimestamp
-	fieldTypeLongLong
-	fieldTypeInt24
-	fieldTypeDate
-	fieldTypeTime
-	fieldTypeDateTime
-	fieldTypeYear
-	fieldTypeNewDate
-	fieldTypeVarChar
-	fieldTypeBit
+	fieldTypeDecimal   fieldType = iota //decimal
+	fieldTypeTiny                       //tiny 1B
+	fieldTypeShort                      //short 2B
+	fieldTypeLong                       //long
+	fieldTypeFloat                      //float
+	fieldTypeDouble                     //double
+	fieldTypeNULL                       //null
+	fieldTypeTimestamp                  //timestamp
+	fieldTypeLongLong                   //long long
+	fieldTypeInt24                      // 3B int24
+	fieldTypeDate                       // date
+	fieldTypeTime                       // time
+	fieldTypeDateTime                   //datetime
+	fieldTypeYear                       //year
+	fieldTypeNewDate                    // newdate
+	fieldTypeVarChar                    //varchar
+	fieldTypeBit                        //bit
 )
+
 const (
-	fieldTypeJSON fieldType = iota + 0xf5
-	fieldTypeNewDecimal
-	fieldTypeEnum
-	fieldTypeSet
-	fieldTypeTinyBLOB
-	fieldTypeMediumBLOB
-	fieldTypeLongBLOB
-	fieldTypeBLOB
-	fieldTypeVarString
-	fieldTypeString
-	fieldTypeGeometry
+	fieldTypeJSON       fieldType = iota + 0xf5 //json
+	fieldTypeNewDecimal                         //new decimal
+	fieldTypeEnum                               //enum
+	fieldTypeSet                                // set
+	fieldTypeTinyBLOB                           //tiny blob
+	fieldTypeMediumBLOB                         // medium blob
+	fieldTypeLongBLOB                           // long blob
+	fieldTypeBLOB                               //blob
+	fieldTypeVarString                          //var string
+	fieldTypeString                             //string
+	fieldTypeGeometry                           //geometry
 )
 
 type fieldFlag uint16

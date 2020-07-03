@@ -210,7 +210,7 @@ func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err erro
 		return nil, "", mc.handleErrorPacket(data)
 	}
 
-	// protocol version [1 byte]
+	// protocol version [1 byte] 协议号 是10
 	if data[0] < minProtocolVersion {
 		return nil, "", fmt.Errorf(
 			"unsupported protocol version %d. Version %d or higher is required",
@@ -219,17 +219,18 @@ func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err erro
 		)
 	}
 
-	// server version [null terminated string]
-	// connection id [4 bytes]
+	// server version [null terminated string]  0x00 结尾的字符串
+	// connection id [4 bytes] 线程 id
+	// 丢弃
 	pos := 1 + bytes.IndexByte(data[1:], 0x00) + 1 + 4
 
-	// first part of the password cipher [8 bytes]
+	// first part of the password cipher [8 bytes] 0x00 结尾  []byte{r, }, 0x11, V, 0x0e, ", 0x0d, t}
 	authData := data[pos : pos+8]
 
 	// (filler) always 0x00 [1 byte]
 	pos += 8 + 1
 
-	// capability flags (lower 2 bytes) [2 bytes]
+	// capability flags (lower 2 bytes) [2 bytes] 服务器能力标志 0xffff 全开
 	mc.flags = clientFlag(binary.LittleEndian.Uint16(data[pos : pos+2]))
 	if mc.flags&clientProtocol41 == 0 {
 		return nil, "", ErrOldProtocol
@@ -244,11 +245,11 @@ func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err erro
 	pos += 2
 
 	if len(data) > pos {
-		// character set [1 byte]
-		// status flags [2 bytes]
-		// capability flags (upper 2 bytes) [2 bytes]
-		// length of auth-plugin-data [1 byte]
-		// reserved (all [00]) [10 bytes]
+		// character set [1 byte] 服务端字符集
+		// status flags [2 bytes] 服务端状态
+		// capability flags (upper 2 bytes) [2 bytes] 拓展服务器能力
+		// length of auth-plugin-data [1 byte]  认证插件长度
+		// reserved (all [00]) [10 bytes]  未使用
 		pos += 1 + 2 + 2 + 1 + 10
 
 		// second part of the password cipher [mininum 13 bytes],
@@ -263,11 +264,11 @@ func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err erro
 		//
 		// The official Python library uses the fixed length 12
 		// which seems to work but technically could have a hidden bug.
-		authData = append(authData, data[pos:pos+12]...)
-		pos += 13
+		authData = append(authData, data[pos:pos+12]...) // 12B Salt
+		pos += 13                                        //0x00 结尾
 
 		// EOF if version (>= 5.5.7 and < 5.5.10) or (>= 5.6.0 and < 5.6.2)
-		// \NUL otherwise
+		// \NUL otherwise  caching_sha2_password0x00
 		if end := bytes.IndexByte(data[pos:], 0x00); end != -1 {
 			plugin = string(data[pos : pos+end])
 		} else {
@@ -527,6 +528,7 @@ func (mc *mysqlConn) readAuthResult() ([]byte, string, error) {
 		}
 		plugin := string(data[1:pluginEndIndex])
 		authData := data[pluginEndIndex+1:]
+		// 盐, 认证插件名
 		return authData, plugin, nil
 
 	default: // Error otherwise
@@ -567,7 +569,8 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 			return 0, mc.handleInFileRequest(string(data[1:]))
 		}
 
-		// column count
+		// select 的返回
+		// column count 字段数 长度编码
 		num, _, n := readLengthEncodedInteger(data)
 		// 长度匹配
 		if n-len(data) == 0 {
@@ -587,9 +590,9 @@ func (mc *mysqlConn) handleErrorPacket(data []byte) error {
 		return ErrMalformPkt
 	}
 
-	// 0xff [1 byte]
+	// 0xff [1 byte] iERR
 
-	// Error Number [16 bit uint]
+	// Error Number [16 bit uint] 错误码
 	errno := binary.LittleEndian.Uint16(data[1:3])
 
 	// 1792: ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION
@@ -610,9 +613,9 @@ func (mc *mysqlConn) handleErrorPacket(data []byte) error {
 
 	pos := 3
 
-	// SQL State [optional: # + 5bytes string]
+	// SQL State [optional: # + 5bytes string] 6B
 	if data[3] == 0x23 {
-		//sqlstate := string(data[4 : 4+5])
+		//sqlstate := string(data[4 : 4+5]) 忽略了
 		pos = 9
 	}
 
@@ -627,14 +630,14 @@ func readStatus(b []byte) statusFlag {
 	return statusFlag(b[0]) | statusFlag(b[1])<<8
 }
 
-// Ok Packet
+// Ok Packet 7B 一般是增删改命令
 // http://dev.mysql.com/doc/internals/en/generic-response-packets.html#packet-OK_Packet
 func (mc *mysqlConn) handleOkPacket(data []byte) error {
 	var n, m int
 
 	// 0x00 [1 byte]
 
-	// Affected rows [Length Coded Binary]
+	// Affected rows [Length Coded Binary] 不定长
 	mc.affectedRows, _, n = readLengthEncodedInteger(data[1:])
 
 	// Insert id [Length Coded Binary]
@@ -646,14 +649,14 @@ func (mc *mysqlConn) handleOkPacket(data []byte) error {
 		return nil
 	}
 
-	// warning count [2 bytes]
+	// warning count 警告数量 [2 bytes]
 
 	return nil
 }
 
 // Read Packets as Field Packets until EOF-Packet or an Error appears
 // http://dev.mysql.com/doc/internals/en/com-query-response.html#packet-Protocol::ColumnDefinition41
-//
+// select 返回的 第二部分 之后的几部分 列属性
 func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 	columns := make([]mysqlField, count)
 
@@ -664,7 +667,7 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 			return nil, err
 		}
 
-		// EOF Packet
+		// EOF Packet 第六个部分
 		if data[0] == iEOF && (len(data) == 5 || len(data) == 1) {
 			if i == count {
 				return columns, nil
@@ -685,7 +688,7 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 		}
 		pos += n
 
-		// Table [len coded string]
+		// Table [len coded string] 表名
 		if mc.cfg.ColumnsWithAlias {
 			tableName, _, n, err := readLengthEncodedString(data[pos:])
 			if err != nil {
@@ -701,14 +704,14 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 			pos += n
 		}
 
-		// Original table [len coded string]
+		// Original table [len coded string] 表名 跳过
 		n, err = skipLengthEncodedString(data[pos:])
 		if err != nil {
 			return nil, err
 		}
 		pos += n
 
-		// Name [len coded string]
+		// Name [len coded string] 列名
 		name, _, n, err := readLengthEncodedString(data[pos:])
 		if err != nil {
 			return nil, err
@@ -716,33 +719,33 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 		columns[i].name = string(name)
 		pos += n
 
-		// Original name [len coded string]
+		// Original name [len coded string] 列名 跳过
 		n, err = skipLengthEncodedString(data[pos:])
 		if err != nil {
 			return nil, err
 		}
 		pos += n
 
-		// Filler [uint8]
+		// Filler [uint8] 跳过一个字节 0x0c
 		pos++
 
-		// Charset [charset, collation uint8]
+		// Charset [charset, collation uint8] 2B
 		columns[i].charSet = data[pos]
 		pos += 2
 
-		// Length [uint32]
+		// Length [uint32] 4B
 		columns[i].length = binary.LittleEndian.Uint32(data[pos : pos+4])
 		pos += 4
 
-		// Field type [uint8]
+		// Field type [uint8] 1B 字段类型
 		columns[i].fieldType = fieldType(data[pos])
 		pos++
 
-		// Flags [uint16]
+		// Flags [uint16] 2B 0x4223
 		columns[i].flags = fieldFlag(binary.LittleEndian.Uint16(data[pos : pos+2]))
 		pos += 2
 
-		// Decimals [uint8]
+		// Decimals [uint8] 1B 0x00
 		columns[i].decimals = data[pos]
 		//pos++
 
@@ -755,6 +758,7 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 
 // Read Packets as Field Packets until EOF-Packet or an Error appears
 // http://dev.mysql.com/doc/internals/en/com-query-response.html#packet-ProtocolText::ResultsetRow
+// 读取一行,  dest 的长度和列数相等才能取到全部, 少了,就只会读到前几列
 func (rows *textRows) readRow(dest []driver.Value) error {
 	mc := rows.mc
 
@@ -767,7 +771,7 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 		return err
 	}
 
-	// EOF Packet
+	// EOF Packet  //查询结果最后的结束部分
 	if data[0] == iEOF && len(data) == 5 {
 		// server_status [2 bytes]
 		rows.mc.status = readStatus(data[3:])
@@ -788,7 +792,7 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 	pos := 0
 
 	for i := range dest {
-		// Read bytes and convert to string
+		// Read bytes and convert to string // 第一个 1B 代表长度
 		dest[i], isNull, n, err = readLengthEncodedString(data[pos:])
 		pos += n
 		if err == nil {
@@ -815,6 +819,8 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 				dest[i] = nil
 				continue
 			}
+
+			// NULL 直接跳过
 		}
 		return err // err != nil
 	}
@@ -823,6 +829,7 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 }
 
 // Reads Packets until EOF-Packet or an Error appears. Returns count of Packets read
+// 读光-丢弃
 func (mc *mysqlConn) readUntilEOF() error {
 	for {
 		data, err := mc.readPacket()
@@ -861,15 +868,15 @@ func (stmt *mysqlStmt) readPrepareResultPacket() (uint16, error) {
 		// statement id [4 bytes]
 		stmt.id = binary.LittleEndian.Uint32(data[1:5])
 
-		// Column (field count) count [16 bit uint]
+		// Column (field count列数) count [16 bit uint] 2B
 		columnCount := binary.LittleEndian.Uint16(data[5:7])
 
-		// Param count [16 bit uint]
+		// Param count [16 bit uint] 2B
 		stmt.paramCount = int(binary.LittleEndian.Uint16(data[7:9]))
 
 		// Reserved [8 bit] 0x00
 
-		// Warning count [16 bit uint]
+		// Warning count [16 bit uint] 2B
 
 		return columnCount, nil
 	}
