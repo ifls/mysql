@@ -13,6 +13,7 @@ import (
 	"reflect"
 )
 
+// 获取字段类型对应的数据库类型名
 func (mf *mysqlField) typeDatabaseName() string {
 	switch mf.fieldType {
 	// 数值
@@ -70,7 +71,7 @@ func (mf *mysqlField) typeDatabaseName() string {
 		return "LONGBLOB"
 
 	// 日期
-	case fieldTypeYear: //1B
+	case fieldTypeYear: //2B
 		return "YEAR"
 	case fieldTypeDate: //3B YYYY-MM-DD
 		return "DATE"
@@ -105,6 +106,7 @@ func (mf *mysqlField) typeDatabaseName() string {
 }
 
 var (
+	// 反射类型
 	scanTypeFloat32   = reflect.TypeOf(float32(0))
 	scanTypeFloat64   = reflect.TypeOf(float64(0))
 	scanTypeInt8      = reflect.TypeOf(int8(0))
@@ -123,15 +125,16 @@ var (
 )
 
 type mysqlField struct {
-	tableName string
-	name      string
-	length    uint32
-	flags     fieldFlag
+	tableName string    //表名
+	name      string    //字段名
+	length    uint32    //数据长度 例如 varchar(n)
+	flags     fieldFlag //字段标志, 主键, 飞空
 	fieldType fieldType //字段类型
-	decimals  byte
-	charSet   uint8
+	decimals  byte      //小数点后的位数
+	charSet   uint8     //字符集
 }
 
+// 返回反射类型
 func (mf *mysqlField) scanType() reflect.Type {
 	switch mf.fieldType {
 	case fieldTypeTiny:

@@ -8,6 +8,7 @@
 
 package mysql
 
+// 事务实现
 type mysqlTx struct {
 	mc *mysqlConn
 }

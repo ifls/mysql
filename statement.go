@@ -16,10 +16,11 @@ import (
 	"reflect"
 )
 
+//预处理语句
 type mysqlStmt struct {
 	mc         *mysqlConn
-	id         uint32
-	paramCount int
+	id         uint32 // 语句id
+	paramCount int    //需要填的参数数量
 }
 
 //发送语句关闭命令
