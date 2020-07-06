@@ -150,7 +150,7 @@ const (
 	fieldTypeTime                       // time
 	fieldTypeDateTime                   //datetime
 	fieldTypeYear                       //year
-	fieldTypeNewDate                    // newdate
+	fieldTypeNewDate                    // newdate 内部类型,不在协议中使用
 	fieldTypeVarChar                    //varchar
 	fieldTypeBit                        //bit
 )
