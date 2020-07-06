@@ -66,6 +66,7 @@ func RegisterDial(network string, dial DialFunc) {
 	})
 }
 
+// xx
 // Open new Connection. 打开单个连接
 // See TODO https://github.com/go-sql-driver/mysql#dsn-data-source-name for how
 // the DSN string is formatted
