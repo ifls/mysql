@@ -2,7 +2,11 @@ package mysql
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"database/sql/driver"
+	"encoding/pem"
+	"io/ioutil"
 	"log"
 	"testing"
 )
@@ -100,5 +104,28 @@ func TestMysqlConn_Begin(t *testing.T) {
 	_, err = stmt.Exec([]driver.Value{val})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPem(t *testing.T) {
+	data, err := ioutil.ReadFile("mykey.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		log.Fatal("failed to decode PEM block containing public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if rsaPubKey, ok := pub.(*rsa.PublicKey); ok {
+		RegisterServerPubKey("mykey", rsaPubKey)
+	} else {
+		log.Fatal("not a RSA public key")
 	}
 }

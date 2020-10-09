@@ -40,11 +40,11 @@ type DialContextFunc func(ctx context.Context, addr string) (net.Conn, error)
 
 var (
 	dialsLock sync.RWMutex
-	dials     map[string]DialContextFunc //tcp/ ucp / ip 用不同的拨号函数
+	dials     map[string]DialContextFunc // tcp/ ucp / ip 用不同的拨号函数
 )
 
-// RegisterDialContext registers a custom dial function. It can then be used by the
-// network address mynet(addr), where mynet is the registered new network.
+// RegisterDialContext registers a custom dial function. 注册自定义拨号函数
+// It can then be used by the network address mynet(addr), where mynet is the registered new network.
 // The current context for the connection and its address is passed to the dial function.
 func RegisterDialContext(net string, dial DialContextFunc) {
 	dialsLock.Lock()
@@ -75,9 +75,7 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &connector{
-		cfg: cfg,
-	}
+	c := &connector{cfg: cfg}
 	return c.Connect(context.Background())
 }
 
@@ -105,7 +103,5 @@ func (d MySQLDriver) OpenConnector(dsn string) (driver.Connector, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &connector{
-		cfg: cfg,
-	}, nil
+	return &connector{cfg: cfg}, nil
 }

@@ -31,22 +31,22 @@ type mysqlConn struct {
 
 	cfg *Config
 
-	maxAllowedPacket int //config 最大包size
-	maxWriteSize     int //最大输出包size
+	maxAllowedPacket int // config 最大包size
+	maxWriteSize     int // 最大输出包size
 
 	writeTimeout time.Duration // config.writeTimeout
 
-	flags  clientFlag //服务器发生给客户端的
-	status statusFlag //最新一次请求, 服务器返回的状态
+	flags  clientFlag // 服务器发生给客户端的
+	status statusFlag // 最新一次请求, 服务器返回的状态
 
-	sequence  uint8 //一个命令拆分多个包时,需要标记 第一个, 新的命令会重置为1
-	parseTime bool  //config.ParseTime 是否解析 时间类型
+	sequence  uint8 // 一个命令拆分多个包时,需要标记 第一个, 新的命令会重置为1
+	parseTime bool  // config.ParseTime 是否解析 时间类型
 	reset     bool  // 重置超时, set when the Go SQL package calls ResetSession
 
 	// for context support (Go 1.8+)
 	watching bool
 	watcher  chan<- context.Context
-	closech  chan struct{} //通知tcp连接已关闭
+	closech  chan struct{} // 通知tcp连接已关闭
 	finished chan<- struct{}
 
 	canceled atomicError // set non-nil if conn is canceled
@@ -63,7 +63,7 @@ func (mc *mysqlConn) handleParams() (err error) {
 			charsets := strings.Split(val, ",")
 			for i := range charsets {
 				// ignore errors here - a charset may not exist 只有一个用得上
-				err = mc.exec("SET NAMES " + charsets[i]) //直接执行
+				err = mc.exec("SET NAMES " + charsets[i]) // 直接执行
 				if err == nil {
 					break
 				}
@@ -108,13 +108,13 @@ func (mc *mysqlConn) markBadConn(err error) error {
 	return driver.ErrBadConn
 }
 
-//开始事务的执行
+// 开始事务的执行
 func (mc *mysqlConn) Begin() (driver.Tx, error) {
 	return mc.begin(false)
 }
 
 func (mc *mysqlConn) begin(readOnly bool) (driver.Tx, error) {
-	//已关闭连接
+	// 已关闭连接
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
 		return nil, driver.ErrBadConn
@@ -343,7 +343,7 @@ func (mc *mysqlConn) interpolateParams(query string, args []driver.Value) (strin
 	return string(buf), nil
 }
 
-//执行 增删改语句
+// 执行 增删改语句
 func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, error) {
 	if mc.closed.IsSet() {
 		errLog.Print(ErrInvalidConn)
@@ -434,7 +434,7 @@ func (mc *mysqlConn) query(query string, args []driver.Value) (*textRows, error)
 			rows := new(textRows)
 			rows.mc = mc
 
-			//没有列数据
+			// 没有列数据
 			if resLen == 0 {
 				rows.rs.done = true
 
@@ -514,7 +514,7 @@ func (mc *mysqlConn) Ping(ctx context.Context) (err error) {
 		return driver.ErrBadConn
 	}
 
-	//如果已经被 cannel 了
+	// 如果已经被 cannel 了
 	if err = mc.watchCancel(ctx); err != nil {
 		return
 	}
