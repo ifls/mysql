@@ -16,20 +16,20 @@ import (
 	"reflect"
 )
 
-//预处理语句
+// 预处理语句
 type mysqlStmt struct {
 	mc         *mysqlConn
 	id         uint32 // 语句id
-	paramCount int    //需要填的参数数量
+	paramCount int    // 需要填的参数数量
 }
 
-//发送语句关闭命令
+// 发送语句关闭命令
 func (stmt *mysqlStmt) Close() error {
 	if stmt.mc == nil || stmt.mc.closed.IsSet() {
 		// driver.Stmt.Close can be called more than once, thus this function
 		// has to be idempotent.
 		// See also Issue #450 and golang/go#16019.
-		//errLog.Print(ErrInvalidConn)
+		// errLog.Print(ErrInvalidConn)
 		return driver.ErrBadConn
 	}
 

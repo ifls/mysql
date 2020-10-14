@@ -35,7 +35,7 @@ type buffer struct {
 
 // newBuffer allocates and returns a new buffer.
 func newBuffer(nc net.Conn) buffer {
-	//4KB
+	// 4KB
 	fg := make([]byte, defaultBufSize)
 	return buffer{
 		buf:  fg,
@@ -75,7 +75,7 @@ func (b *buffer) fill(need int) error {
 	// if we're filling the fg buffer, move the existing data to the start of it.
 	// if we're filling the bg buffer, copy over the data
 	if n > 0 {
-		//左移
+		// 左移
 		copy(dest[:n], b.buf[b.idx:])
 	}
 
@@ -84,7 +84,7 @@ func (b *buffer) fill(need int) error {
 
 	for {
 		if b.timeout > 0 {
-			//设置读超时
+			// 设置读超时
 			if err := b.nc.SetReadDeadline(time.Now().Add(b.timeout)); err != nil {
 				return err
 			}
@@ -145,7 +145,7 @@ func (b *buffer) takeBuffer(length int) ([]byte, error) {
 		return b.buf[:length], nil
 	}
 
-	if length < maxPacketSize { //16M
+	if length < maxPacketSize { // 16M
 		b.buf = make([]byte, length)
 		return b.buf, nil
 	}

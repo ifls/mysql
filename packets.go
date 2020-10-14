@@ -129,33 +129,33 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 
 	for {
 		var size int
-		//超出大小,需要分开发送
+		// 超出大小,需要分开发送
 		if pktLen >= maxPacketSize {
-			//表示数据长度是满的
+			// 表示数据长度是满的
 			data[0] = 0xff
 			data[1] = 0xff
 			data[2] = 0xff
 			size = maxPacketSize
 		} else {
-			//三B长度 小端序
-			data[0] = byte(pktLen) //第1B是地位值
+			// 三B长度 小端序
+			data[0] = byte(pktLen) // 第1B是地位值
 			data[1] = byte(pktLen >> 8)
 			data[2] = byte(pktLen >> 16)
 			size = pktLen
 		}
-		//1B 序号
+		// 1B 序号
 		data[3] = mc.sequence
 
 		// Write packet
 		if mc.writeTimeout > 0 {
-			//设置写超时
+			// 设置写超时
 			if err := mc.netConn.SetWriteDeadline(time.Now().Add(mc.writeTimeout)); err != nil {
 				return err
 			}
 		}
 
-		//写出包 len, len, len, seq, cmd,
-		//写出包 唯一发送包的地址
+		// 写出包 len, len, len, seq, cmd,
+		// 写出包 唯一发送包的地址
 		printBytes("send", data[:4+size])
 		n, err := mc.netConn.Write(data[:4+size])
 		if err == nil && n == 4+size {
@@ -266,7 +266,7 @@ func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err erro
 		// The official Python library uses the fixed length 12
 		// which seems to work but technically could have a hidden bug.
 		authData = append(authData, data[pos:pos+12]...) // 12B Salt
-		pos += 13                                        //0x00 结尾
+		pos += 13                                        // 0x00 结尾
 
 		// EOF if version (>= 5.5.7 and < 5.5.10) or (>= 5.6.0 and < 5.6.2)
 		// \NUL otherwise  caching_sha2_password0x00
@@ -453,9 +453,9 @@ func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
 	// 新命令的第一个包 Reset Packet Sequence
 	mc.sequence = 0
 
-	//1B cmd + arg 也就是真实的查询语句
+	// 1B cmd + arg 也就是真实的查询语句
 	pktLen := 1 + len(arg)
-	//复用缓冲区
+	// 复用缓冲区
 	data, err := mc.buf.takeBuffer(pktLen + 4)
 	if err != nil {
 		// cannot take the buffer. Something must be wrong with the connection
@@ -463,7 +463,7 @@ func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
 		return errBadConnNoWrite
 	}
 
-	//[len, len, len, seq, cmd, arg]
+	// [len, len, len, seq, cmd, arg]
 
 	// Add command byte
 	data[4] = command
@@ -539,7 +539,7 @@ func (mc *mysqlConn) readAuthResult() ([]byte, string, error) {
 
 // Returns error if Packet is not an 'Result OK'-Packet
 func (mc *mysqlConn) readResultOK() error {
-	//读网络包,不解析
+	// 读网络包,不解析
 	data, err := mc.readPacket()
 	if err != nil {
 		return err
@@ -560,13 +560,13 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 	if err == nil {
 		switch data[0] {
 
-		case iOK: //增删改命令
+		case iOK: // 增删改命令
 			return 0, mc.handleOkPacket(data)
 
-		case iERR: //发生错误
+		case iERR: // 发生错误
 			return 0, mc.handleErrorPacket(data)
 
-		case iLocalInFile: //???? 啥东西
+		case iLocalInFile: // ???? 啥东西
 			return 0, mc.handleInFileRequest(string(data[1:]))
 		}
 
@@ -575,7 +575,7 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 		num, _, n := readLengthEncodedInteger(data)
 		// 长度匹配
 		if n-len(data) == 0 {
-			//返回列数量
+			// 返回列数量
 			return int(num), nil
 		}
 
@@ -616,7 +616,7 @@ func (mc *mysqlConn) handleErrorPacket(data []byte) error {
 
 	// SQL State [optional: # + 5bytes string] 6B
 	if data[3] == 0x23 {
-		//sqlstate := string(data[4 : 4+5]) 忽略了
+		// sqlstate := string(data[4 : 4+5]) 忽略了
 		pos = 9
 	}
 
@@ -748,12 +748,12 @@ func (mc *mysqlConn) readColumns(count int) ([]mysqlField, error) {
 
 		// Decimals [uint8] 1B 0x00
 		columns[i].decimals = data[pos]
-		//pos++
+		// pos++
 
 		// Default value [len coded binary]
-		//if pos < len(data) {
+		// if pos < len(data) {
 		//	defaultVal, _, err = bytesToLengthCodedBinary(data[pos:])
-		//}
+		// }
 	}
 }
 
@@ -804,7 +804,7 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 					switch rows.rs.columns[i].fieldType {
 					case fieldTypeTimestamp, fieldTypeDateTime,
 						fieldTypeDate, fieldTypeNewDate:
-						//解析日期
+						// 解析日期
 						dest[i], err = parseDateTime(
 							dest[i].([]byte),
 							mc.cfg.Loc,
@@ -1244,7 +1244,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			continue
 
 		// Numeric Types
-		case fieldTypeTiny: //1B
+		case fieldTypeTiny: // 1B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				dest[i] = int64(data[pos])
 			} else {
@@ -1253,7 +1253,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			pos++
 			continue
 
-		case fieldTypeShort, fieldTypeYear: //2B
+		case fieldTypeShort, fieldTypeYear: // 2B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				dest[i] = int64(binary.LittleEndian.Uint16(data[pos : pos+2]))
 			} else {
@@ -1262,7 +1262,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			pos += 2
 			continue
 
-		case fieldTypeInt24, fieldTypeLong: //3B 4B
+		case fieldTypeInt24, fieldTypeLong: // 3B 4B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				dest[i] = int64(binary.LittleEndian.Uint32(data[pos : pos+4]))
 			} else {
@@ -1271,7 +1271,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			pos += 4
 			continue
 
-		case fieldTypeLongLong: //8B
+		case fieldTypeLongLong: // 8B
 			if rows.rs.columns[i].flags&flagUnsigned != 0 {
 				val := binary.LittleEndian.Uint64(data[pos : pos+8])
 				if val > math.MaxInt64 {
@@ -1314,7 +1314,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			}
 			return err
 
-		case //读日期
+		case // 读日期
 			fieldTypeDate, fieldTypeNewDate, // Date YYYY-MM-DD
 			fieldTypeTime,                         // Time [-][H]HH:MM:SS[.fractal]
 			fieldTypeTimestamp, fieldTypeDateTime: // Timestamp YYYY-MM-DD HH:MM:SS[.fractal]
@@ -1331,7 +1331,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 				var dstlen uint8
 				switch decimals := rows.rs.columns[i].decimals; decimals {
 				case 0x00, 0x1f:
-					dstlen = 8 //8B hh:mm:ss
+					dstlen = 8 // 8B hh:mm:ss
 				case 1, 2, 3, 4, 5, 6:
 					dstlen = 8 + 1 + decimals
 				default:
@@ -1341,7 +1341,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 					)
 				}
 				dest[i], err = formatBinaryTime(data[pos:pos+int(num)], dstlen)
-			case rows.mc.parseTime: //time.Time
+			case rows.mc.parseTime: // time.Time
 				dest[i], err = parseBinaryDateTime(num, data[pos:], rows.mc.cfg.Loc)
 			default:
 				var dstlen uint8

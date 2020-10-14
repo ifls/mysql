@@ -17,19 +17,19 @@ import (
 func (mf *mysqlField) typeDatabaseName() string {
 	switch mf.fieldType {
 	// 数值
-	case fieldTypeTiny: //1B
+	case fieldTypeTiny: // 1B
 		return "TINYINT"
-	case fieldTypeShort: //2B
+	case fieldTypeShort: // 2B
 		return "SMALLINT"
-	case fieldTypeInt24: //3B
+	case fieldTypeInt24: // 3B
 		return "MEDIUMINT"
-	case fieldTypeLong: //4B
+	case fieldTypeLong: // 4B
 		return "INT"
 	case fieldTypeLongLong: // 8B
 		return "BIGINT"
-	case fieldTypeFloat: //4B
+	case fieldTypeFloat: // 4B
 		return "FLOAT"
-	case fieldTypeDouble: //8B
+	case fieldTypeDouble: // 8B
 		return "DOUBLE"
 	case fieldTypeDecimal: // decimal(m, d) (max(m,d) + 2)B
 		return "DECIMAL"
@@ -38,13 +38,13 @@ func (mf *mysqlField) typeDatabaseName() string {
 		if mf.charSet == collations[binaryCollation] {
 			return "BINARY" // 二进制, []byte
 		}
-		return "CHAR" //字符数组, 需要指定编码集
-	case fieldTypeVarChar: //同下
+		return "CHAR" // 字符数组, 需要指定编码集
+	case fieldTypeVarChar: // 同下
 		if mf.charSet == collations[binaryCollation] {
 			return "VARBINARY"
 		}
 		return "VARCHAR"
-	case fieldTypeVarString: //变长字符串 [0-65535]B char(n) varchar(n) 表示 字符的个数, 不是字节数
+	case fieldTypeVarString: // 变长字符串 [0-65535]B char(n) varchar(n) 表示 字符的个数, 不是字节数
 		if mf.charSet == collations[binaryCollation] {
 			return "VARBINARY"
 		}
@@ -54,9 +54,9 @@ func (mf *mysqlField) typeDatabaseName() string {
 			return "TINYTEXT"
 		}
 		return "TINYBLOB"
-	case fieldTypeBLOB: //[0-2^16]B
+	case fieldTypeBLOB: // [0-2^16]B
 		if mf.charSet != collations[binaryCollation] {
-			return "TEXT" //text 是文本
+			return "TEXT" // text 是文本
 		}
 		return "BLOB" // blob 是二进制块
 	case fieldTypeMediumBLOB: // [0-2^24]B
@@ -71,15 +71,15 @@ func (mf *mysqlField) typeDatabaseName() string {
 		return "LONGBLOB"
 
 	// 日期
-	case fieldTypeYear: //2B
+	case fieldTypeYear: // 2B
 		return "YEAR"
-	case fieldTypeDate: //3B YYYY-MM-DD
+	case fieldTypeDate: // 3B YYYY-MM-DD
 		return "DATE"
-	case fieldTypeTime: //3B HH:MM:SS
+	case fieldTypeTime: // 3B HH:MM:SS
 		return "TIME"
-	case fieldTypeTimestamp: //4B unix 时间戳 秒级
+	case fieldTypeTimestamp: // 4B unix 时间戳 秒级
 		return "TIMESTAMP"
-	case fieldTypeDateTime: //8B YYYY-MM-DD HH:MM:SS
+	case fieldTypeDateTime: // 8B YYYY-MM-DD HH:MM:SS
 		return "DATETIME"
 	// 特殊
 	case fieldTypeBit: // 特殊的 BIT(m) 存储 m 位, 提供位操作
@@ -88,17 +88,17 @@ func (mf *mysqlField) typeDatabaseName() string {
 		return "ENUM"
 	case fieldTypeGeometry: // 地理位置  point
 		return "GEOMETRY"
-	case fieldTypeJSON: //json 不能设定长度
+	case fieldTypeJSON: // json 不能设定长度
 		return "JSON"
-	case fieldTypeNewDate: //?
+	case fieldTypeNewDate: // ?
 		return "DATE"
-	case fieldTypeNewDecimal: //?
+	case fieldTypeNewDecimal: // ?
 		return "DECIMAL"
 	case fieldTypeSet: // 集合
 		return "SET"
 
 	// NULL
-	case fieldTypeNULL: //NULL
+	case fieldTypeNULL: // NULL
 		return "NULL"
 	default:
 		return ""
@@ -125,13 +125,13 @@ var (
 )
 
 type mysqlField struct {
-	tableName string    //表名
-	name      string    //字段名
-	length    uint32    //数据长度 例如 varchar(n)
-	flags     fieldFlag //字段标志, 主键, 飞空
-	fieldType fieldType //字段类型
-	decimals  byte      //小数点后的位数
-	charSet   uint8     //字符集
+	tableName string    // 表名
+	name      string    // 字段名
+	length    uint32    // 数据长度 例如 varchar(n)
+	flags     fieldFlag // 字段标志, 主键, 飞空
+	fieldType fieldType // 字段类型
+	decimals  byte      // 小数点后的位数
+	charSet   uint8     // 字符集
 }
 
 // 返回反射类型

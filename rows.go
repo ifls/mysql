@@ -121,11 +121,11 @@ func (rows *mysqlRows) Close() (err error) {
 
 	// Remove unread packets from stream
 	if !rows.rs.done {
-		//读光
+		// 读光
 		err = mc.readUntilEOF()
 	}
 	if err == nil {
-		//丢弃
+		// 丢弃
 		if err = mc.discardResults(); err != nil {
 			return err
 		}

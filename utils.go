@@ -241,7 +241,7 @@ func bToi(b byte) (int, error) {
 }
 
 func parseBinaryDateTime(num uint64, data []byte, loc *time.Location) (driver.Value, error) {
-	switch num { //数长度
+	switch num { // 数长度
 	case 0:
 		return time.Time{}, nil
 	case 4:
@@ -550,7 +550,7 @@ func readLengthEncodedInteger(b []byte) (uint64, bool, int) {
 				uint64(b[7])<<48 | uint64(b[8])<<56,
 			false, 9
 	}
-	//255 0xff 不用?
+	// 255 0xff 不用?
 
 	// 0-250: value of first byte 1B
 	return uint64(b[0]), false, 1
@@ -810,7 +810,7 @@ func mapIsolationLevel(level driver.IsolationLevel) (string, error) {
 	}
 }
 
-//自己写的, 打印发送和收到的数据
+// 自己写的, 打印发送和收到的数据
 func printBytes(source string, data []byte) {
 	len2 := math.MaxInt32
 	if source == "read" {
@@ -819,20 +819,20 @@ func printBytes(source string, data []byte) {
 		len2 = len(data) - 4
 	}
 	add := 60
-	//if len2 > 0x100 {
+	// if len2 > 0x100 {
 	//	add = -8
-	//}
+	// }
 	s := fmt.Sprintf("%s len = 0x%x(frame=%d) ", source, len2, len2+add)
 
 	packetLength := int(data[2])
-	packetLength = packetLength << 8 + int(data[1])
-	packetLength = packetLength << 8 + int(data[0])
+	packetLength = packetLength<<8 + int(data[1])
+	packetLength = packetLength<<8 + int(data[0])
 	if source == "send" {
 		s += fmt.Sprintf("len=0x%x(%d)  sequence=%d cmd=%d(0x%x) name=%s", packetLength, packetLength, data[3], data[4], data[4], cmdName[data[4]])
 	}
 	s += "\n"
-	//i := 0
-	//for _, b := range data {
+	// i := 0
+	// for _, b := range data {
 	//	i++
 	//	s += fmt.Sprintf("%02x ", b)
 	//	if i % 8 == 0 {
@@ -842,7 +842,7 @@ func printBytes(source string, data []byte) {
 	//		s += "\n"
 	//	}
 	//
-	//}
+	// }
 	if len(data) > 0 {
 		s = s[:len(s)-1]
 	}
