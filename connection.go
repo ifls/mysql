@@ -137,7 +137,7 @@ func (mc *mysqlConn) begin(readOnly bool) (driver.Tx, error) {
 func (mc *mysqlConn) Close() (err error) {
 	// Makes Close idempotent幂等
 	if !mc.closed.IsSet() {
-		err = mc.writeCommandPacket(comQuit)
+		err = mc.writeCommandPacket(comQuit) // 发送退出连接
 	}
 
 	mc.cleanup()
@@ -353,7 +353,7 @@ func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, err
 		if !mc.cfg.InterpolateParams {
 			return nil, driver.ErrSkip
 		}
-		// try to interpolate the parameters to save extra roundtrips for preparing and closing a statement
+		// try to interpolate篡改/插入 the parameters to save extra roundtrips for preparing and closing a statement
 		prepared, err := mc.interpolateParams(query, args)
 		if err != nil {
 			return nil, err
@@ -515,7 +515,7 @@ func (mc *mysqlConn) Ping(ctx context.Context) (err error) {
 		return driver.ErrBadConn
 	}
 
-	// 如果已经被 cannel 了
+	// 如果已经被 cancel 了
 	if err = mc.watchCancel(ctx); err != nil {
 		return
 	}
@@ -553,6 +553,7 @@ func (mc *mysqlConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver
 	return mc.begin(opts.ReadOnly)
 }
 
+// todo 怎么 实现的 context??
 func (mc *mysqlConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	dargs, err := namedValueToValue(args)
 	if err != nil {

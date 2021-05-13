@@ -434,7 +434,7 @@ func (mc *mysqlConn) writeAuthSwitchPacket(authData []byte) error {
 /******************************************************************************
 *                             Command Packets                                 *
 ******************************************************************************/
-
+// 用于发送 ping 和 quit命令
 func (mc *mysqlConn) writeCommandPacket(command byte) error {
 	// Reset Packet Sequence
 	mc.sequence = 0
@@ -453,6 +453,7 @@ func (mc *mysqlConn) writeCommandPacket(command byte) error {
 	return mc.writePacket(data)
 }
 
+// 用于 查询语句 和 生成预处理语句
 func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
 	// 新命令的第一个包 Reset Packet Sequence
 	mc.sequence = 0
@@ -480,6 +481,7 @@ func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
 	return mc.writePacket(data)
 }
 
+// 用于关闭, 预处理语句(根据 statement_id)
 func (mc *mysqlConn) writeCommandPacketUint32(command byte, arg uint32) error {
 	// Reset Packet Sequence
 	mc.sequence = 0
@@ -575,7 +577,7 @@ func (mc *mysqlConn) readResultSetHeaderPacket() (int, error) {
 			return 0, mc.handleInFileRequest(string(data[1:]))
 		}
 
-		// select 的返回
+		// 如果不是以上的情况, 应该是 select语句 的返回
 		// column count 字段数 长度编码
 		num, _, n := readLengthEncodedInteger(data)
 		// 长度匹配
@@ -878,12 +880,12 @@ func (stmt *mysqlStmt) readPrepareResultPacket() (uint16, error) {
 		// Column (field count列数) count [16 bit uint] 2B
 		columnCount := binary.LittleEndian.Uint16(data[5:7])
 
-		// Param count [16 bit uint] 2B
+		// Param count [16 bit uint] 2B  列数量和参数数量, 必定相等??
 		stmt.paramCount = int(binary.LittleEndian.Uint16(data[7:9]))
 
 		// Reserved [8 bit] 0x00
 
-		// Warning count [16 bit uint] 2B
+		// Warning count 告警数量, [16 bit uint] 2B
 
 		return columnCount, nil
 	}
