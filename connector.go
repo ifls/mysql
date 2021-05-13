@@ -65,7 +65,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		}
 	}
 
-	// Call startWatcher for context support (From Go 1.8) 等待其他事件完成？???
+	// Call startWatcher for context support (From Go 1.8) 等待其他事件完成????
 	mc.startWatcher()
 	if err := mc.watchCancel(ctx); err != nil {
 		// 关闭连接
@@ -93,7 +93,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	}
 
 	// make Client Authentication Packet
-	authResp, err := mc.auth(authData, plugin) // 算认证信息
+	authResp, err := mc.auth(authData, plugin) // 计算认证信息
 	if err != nil {
 		// try the default auth plugin, if using the requested plugin failed
 		errLog.Print("could not use requested auth plugin '"+plugin+"': ", err.Error())
@@ -110,7 +110,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		return nil, err
 	}
 
-	// 读取认证结果 Handle response to auth packet, switch methods if possible
+	// 读取处理认证结果包 Handle response to auth packet, switch methods if possible
 	if err = mc.handleAuthResult(authData, plugin); err != nil {
 		// Authentication failed and MySQL has already closed the connection
 		// (https://dev.mysql.com/doc/internals/en/authentication-fails.html).

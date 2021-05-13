@@ -559,7 +559,7 @@ func readLengthEncodedInteger(b []byte) (uint64, bool, int) {
 // encodes a uint64 value and appends it to the given bytes slice
 func appendLengthEncodedInteger(b []byte, n uint64) []byte {
 	switch {
-	case n <= 250:
+	case n <= 250: // [1, 251)
 		return append(b, byte(n))
 
 	case n <= 0xffff:

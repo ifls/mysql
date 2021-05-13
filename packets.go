@@ -138,7 +138,7 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 			size = maxPacketSize
 		} else {
 			// 三B长度 小端序
-			data[0] = byte(pktLen) // 第1B是地位值
+			data[0] = byte(pktLen) // 第1B 是低位值
 			data[1] = byte(pktLen >> 8)
 			data[2] = byte(pktLen >> 16)
 			size = pktLen
@@ -157,21 +157,23 @@ func (mc *mysqlConn) writePacket(data []byte) error {
 		// 写出包 len, len, len, seq, cmd,
 		// 写出包 唯一发送包的地址
 		printBytes("send", data[:4+size])
+
 		n, err := mc.netConn.Write(data[:4+size])
 		if err == nil && n == 4+size {
 			mc.sequence++
-			// 判断是否满包
+			// 如果不是满包, 就不用发下一个包了,
+			// 如果刚好是满包, 下一个可以为 4B + 空body
 			if size != maxPacketSize {
 				return nil
 			}
 			pktLen -= size
-			data = data[size:]
+			data = data[size:] // 为什么只加了 size?, 要保留4B 填充头部 3B len + 1B seq
 			continue
 		}
 
 		// Handle error
 		if err == nil { // n != len(data) 没发完
-			mc.cleanup()
+			mc.cleanup() // 关闭连接
 			errLog.Print(ErrMalformPkt)
 		} else {
 			if cerr := mc.canceled.Value(); cerr != nil {
@@ -289,6 +291,7 @@ func (mc *mysqlConn) readHandshakePacket() (data []byte, plugin string, err erro
 }
 
 // Client Authentication Packet
+// 作为 响应服务器的握手请求, 之前服务器会再回应 OK|ERR 包
 // http://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
 func (mc *mysqlConn) writeHandshakeResponsePacket(authResp []byte, plugin string) error {
 	// Adjust client flags based on server support
@@ -340,19 +343,19 @@ func (mc *mysqlConn) writeHandshakeResponsePacket(authResp []byte, plugin string
 		return errBadConnNoWrite
 	}
 
-	// ClientFlags [32 bit]
+	// ClientFlags [32 bit] 协商通信
 	data[4] = byte(clientFlags)
 	data[5] = byte(clientFlags >> 8)
 	data[6] = byte(clientFlags >> 16)
 	data[7] = byte(clientFlags >> 24)
 
-	// MaxPacketSize [32 bit] (none)
+	// MaxPacketSize [32 bit] (none)  4B 最长消息长度, 0表示不限制
 	data[8] = 0x00
 	data[9] = 0x00
 	data[10] = 0x00
 	data[11] = 0x00
 
-	// Charset [1 byte]
+	// Charset [1 byte]  字符编码
 	var found bool
 	data[12], found = collations[mc.cfg.Collation]
 	if !found {
@@ -362,7 +365,7 @@ func (mc *mysqlConn) writeHandshakeResponsePacket(authResp []byte, plugin string
 		return errors.New("unknown collation")
 	}
 
-	// Filler [23 bytes] (all 0x00)
+	// Filler [23 bytes] (all 0x00)  23B保留字节
 	pos := 13
 	for ; pos < 13+23; pos++ {
 		data[pos] = 0
@@ -371,6 +374,7 @@ func (mc *mysqlConn) writeHandshakeResponsePacket(authResp []byte, plugin string
 	// SSL Connection Request Packet
 	// http://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
 	if mc.cfg.tls != nil {
+		// todo 先发 再切协议??
 		// Send TLS / SSL request packet
 		if err := mc.writePacket(data[:(4+4+1+23)+4]); err != nil {
 			return err
@@ -386,25 +390,25 @@ func (mc *mysqlConn) writeHandshakeResponsePacket(authResp []byte, plugin string
 		mc.buf.nc = tlsConn
 	}
 
-	// User [null terminated string]
+	// User [null terminated string] 用户名 \x00结尾
 	if len(mc.cfg.User) > 0 {
 		pos += copy(data[pos:], mc.cfg.User)
 	}
-	data[pos] = 0x00
+	data[pos] = 0x00 // '\0' null结尾
 	pos++
 
 	// Auth Data [length encoded integer]
-	pos += copy(data[pos:], authRespLEI)
-	pos += copy(data[pos:], authResp)
+	pos += copy(data[pos:], authRespLEI) // 密码长度
+	pos += copy(data[pos:], authResp)    // 密码
 
-	// Databasename [null terminated string]
+	// Databasename [null terminated string]  数据库名字
 	if len(mc.cfg.DBName) > 0 {
 		pos += copy(data[pos:], mc.cfg.DBName)
 		data[pos] = 0x00
 		pos++
 	}
 
-	pos += copy(data[pos:], plugin)
+	pos += copy(data[pos:], plugin) // 插件
 	data[pos] = 0x00
 	pos++
 
@@ -463,6 +467,7 @@ func (mc *mysqlConn) writeCommandPacketStr(command byte, arg string) error {
 		return errBadConnNoWrite
 	}
 
+	// 3B len, 1B seq
 	// [len, len, len, seq, cmd, arg]
 
 	// Add command byte
@@ -949,6 +954,7 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 		)
 	}
 
+	// 第一个 4 是 3B len + 1B seq
 	const minPktLen = 4 + 1 + 4 + 1 + 4
 	mc := stmt.mc
 
@@ -976,36 +982,43 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 		return errBadConnNoWrite
 	}
 
-	// command [1 byte]
+	// command [1 byte]  // 执行预处理语句用的
 	data[4] = comStmtExecute
 
-	// statement_id [4 bytes]
+	// statement_id [4 bytes] 预处理语句id
 	data[5] = byte(stmt.id)
 	data[6] = byte(stmt.id >> 8)
 	data[7] = byte(stmt.id >> 16)
 	data[8] = byte(stmt.id >> 24)
 
 	// flags (0: CURSOR_TYPE_NO_CURSOR) [1 byte]
-	data[9] = 0x00
+	// 0x00: CURSOR_TYPE_NO_CURSOR
+	// 0x01: CURSOR_TYPE_READ_ONLY
+	// 0x02: CURSOR_TYPE_FOR_UPDATE
+	// 0x04: CURSOR_TYPE_SCROLLABLE
+	data[9] = 0x00 // 游标类型
 
-	// iteration_count (uint32(1)) [4 bytes]
+	// iteration_count (uint32(1)) [4 bytes] 保留字段, 恒为 1
 	data[10] = 0x01
 	data[11] = 0x00
 	data[12] = 0x00
 	data[13] = 0x00
 
-	if len(args) > 0 {
+	if len(args) > 0 { // 如果参数数量 > 0
 		pos := minPktLen
 
-		var nullMask []byte
+		var nullMask []byte // null值的掩码
+		// maskLen 位掩码长度, 向上取整
 		if maskLen, typesLen := (len(args)+7)/8, 1+2*len(args); pos+maskLen+typesLen >= cap(data) {
 			// buffer has to be extended but we don't know by how much so
 			// we depend on append after all data with known sizes fit.
 			// We stop at that because we deal with a lot of columns here
 			// which makes the required allocation size hard to guess.
+			// 扩充切片
 			tmp := make([]byte, pos+maskLen+typesLen)
 			copy(tmp[:pos], data[:pos])
 			data = tmp
+
 			nullMask = data[pos : pos+maskLen]
 			// No need to clean nullMask as make ensures that.
 			pos += maskLen
@@ -1017,15 +1030,15 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 			pos += maskLen
 		}
 
-		// newParameterBoundFlag 1 [1 byte]
+		// newParameterBoundFlag 1 [1 byte] 参数绑定情况 1B
 		data[pos] = 0x01
 		pos++
 
 		// type of each parameter [len(args)*2 bytes]
-		paramTypes := data[pos:]
+		paramTypes := data[pos:] // 参数类型
 		pos += len(args) * 2
 
-		// value of each parameter [n bytes]
+		// value of each parameter [n bytes] 参数具体值.
 		paramValues := data[pos:pos]
 		valuesCap := cap(paramValues)
 
@@ -1091,7 +1104,7 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 					)
 				}
 
-			case bool:
+			case bool: // bool 就转为 1和0
 				paramTypes[i+i] = byte(fieldTypeTiny)
 				paramTypes[i+i+1] = 0x00
 
@@ -1133,14 +1146,14 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 					paramValues = appendLengthEncodedInteger(paramValues,
 						uint64(len(v)),
 					)
-					paramValues = append(paramValues, v...)
+					paramValues = append(paramValues, v...) // 参数值会扩充
 				} else {
 					if err := stmt.writeCommandLongData(i, []byte(v)); err != nil {
 						return err
 					}
 				}
 
-			case time.Time:
+			case time.Time: // 时间作为 字符串类型??
 				paramTypes[i+i] = byte(fieldTypeString)
 				paramTypes[i+i+1] = 0x00
 
@@ -1165,7 +1178,7 @@ func (stmt *mysqlStmt) writeExecutePacket(args []driver.Value) error {
 
 		// Check if param values exceeded the available buffer
 		// In that case we must build the data packet with the new values buffer
-		if valuesCap != cap(paramValues) {
+		if valuesCap != cap(paramValues) { // 像string这样的变长类型, 会append 扩充
 			data = append(data[:pos], paramValues...)
 			if err = mc.buf.store(data); err != nil {
 				errLog.Print(err)

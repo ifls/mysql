@@ -400,6 +400,7 @@ func (mc *mysqlConn) exec(query string) error {
 		}
 	}
 
+	// 剩下的都丢掉
 	return mc.discardResults()
 }
 
